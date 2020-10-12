@@ -188,6 +188,22 @@ class DetailPagnation(object):
 
 
 if __name__ == '__main__':
+    def task(root_path, photo_title_url):
+        try:
+            save_file_name = root_path + os.path.sep + photo_title_url['photo_title'] + ".png"
+            if not os.path.exists(save_file_name):
+                download_file(photo_title_url['photo_url'], save_file_name)
+        except:
+            pass
+
+    import os
+    from reborn_kdd.utils import download_file
+    from threading import Thread
+
+    root_path = '../../download/唯一图库'
+    if not os.path.exists(root_path):
+        os.mkdir(root_path)
+
     ca = Categories()
 
     for tag in ca.main():
@@ -198,5 +214,14 @@ if __name__ == '__main__':
             print("1", xiangce_hrefs)
             for xh in xiangce_hrefs:
                 dp = DetailPagnation(xh)
-                for photo_title_url in dp.main():
-                    print("2", photo_title_url)
+                try:
+                    task_ts = []
+                    for photo_title_url in dp.main():
+                        print("2", photo_title_url)
+
+                        task_t = Thread(target=task, args=(root_path, photo_title_url))
+                        task_ts.append(task_t)
+                        task_t.start()
+                    for task_t in task_ts: task_t.join()
+                except:
+                    pass

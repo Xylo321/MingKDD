@@ -69,7 +69,6 @@ class CSDN(object):
 
 
 if __name__ == '__main__':
-
     c = CSDN()
     cats = c.get_categories()
     print(cats)

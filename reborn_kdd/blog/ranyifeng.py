@@ -4,7 +4,7 @@ from lxml import etree
 
 def get_categories():
     url = "http://www.ruanyifeng.com/blog/archives.html"
-    r = requests.get(url, verify=False, headers={"connection": "close"})
+    r = requests.get(url, verify=False, headers={"connection": "close", "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.87 Safari/537.36",})
     page = etree.HTML(r.text)
     css = "#beta-inner > div > div > ul > li  > a"
     cats = page.cssselect(css)

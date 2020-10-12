@@ -15,6 +15,8 @@ class ChromeDriver(object):
             executable_path = "%s%schromedriver_mac" % (os.path.split(os.path.abspath(__file__))[0], os.path.sep)
         elif 'Linux' in pl:
             executable_path = "%s%schromedriver_linux" % (os.path.split(os.path.abspath(__file__))[0], os.path.sep)
+        elif 'Windows' in pl:
+            executable_path = "%s%schromedriver_win" % (os.path.split(os.path.abspath(__file__))[0], os.path.sep)
         else:
             raise Exception('Unknown Operation System Type')
 
@@ -50,12 +52,18 @@ class ChromeDriver(object):
         # raise Exception("wait element load timeout loop_time failed")
 
     def del_ziyuansu(self, parent_css, child_css):
+        """
+        删除子元素
+        """
         parent_dom = self.driver.find_element_by_css_selector(parent_css)
         child_doms = self.cssselect(child_css)
         for child_dom in child_doms:
             self.driver.execute_script("arguments[0].removeChild(arguments[1])", parent_dom, child_dom)
 
     def xila_gundongtiao(self, scroll_num, wait_time=5):
+        """
+        下拉滚动条
+        """
         js = "var q=document.documentElement.scrollTop=%d" % scroll_num
         self.driver.execute_script(js)
         time.sleep(wait_time)
