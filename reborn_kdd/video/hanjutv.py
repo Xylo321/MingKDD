@@ -39,16 +39,33 @@ def get_hanjus(page=1):
     return [{"title": hanju_dom.get('title'), "url": ROOT_URL + hanju_dom.get('href')} for hanju_dom in hanju_doms], int(last_page)
 
 
-def get_hanju_m3u8_list(hanju_url):
-    """获取该韩剧的m3u8清单文件。
+
+def get_hanju_jujis(hanju_url):
+    """获取剧集
     """
     global ROOT_URL
     # .detail-main-btn > .hjtvui-btn
     r = requests.get(hanju_url)
+    r.encoding = 'utf-8'
     body_dom = etree.HTML(r.text)
-    go_paly_url = ROOT_URL + body_dom.cssselect('.detail-main-btn > .hjtvui-btn')[0].get('href')
-    # .playBox > #playPath
-    r = requests.get(go_paly_url)
+    juji_doms = body_dom.cssselect('.juji-list > li > a')
+    jujis = []
+    if len(juji_doms) == 0:
+        go_paly_url = ROOT_URL + body_dom.cssselect('.detail-main-btn > .hjtvui-btn')[0].get('href')
+        # .playBox > #playPath
+        jujis.append([go_paly_url, '1'])
+    else:
+        for juji_dom in juji_doms:
+            juji_name = juji_dom.text
+            if juji_name == '播放': juji_name = '1'
+            jujis.append([ROOT_URL + juji_dom.get('href'), juji_name])
+    return jujis
+
+
+def get_m3u8(go_play_url):
+    """获取m3u8清单文件地址
+    """
+    r = requests.get(go_play_url)
     body_dom = etree.HTML(r.text)
     play_url = 'http:' + body_dom.cssselect('.playBox > #playPath')[0].get('src')
 
@@ -61,16 +78,27 @@ def get_hanju_m3u8_list(hanju_url):
 
 
 if __name__ == '__main__':
+    import os
+    import shutil
+    from reborn_kdd.utils.m3u8 import download_m3u8_video
+
+    root_path = '../../download/'
     hanjus, last_page = get_hanjus()
     print(hanjus, last_page)
-    for page in range(2, last_page + 1):
+    for page in range(1, last_page + 1):
         hanjus, last_page = get_hanjus(page)
         print(hanjus)
-        for hanju in hanjus:
-            try:
-                m3u8_url = get_hanju_m3u8_list(hanju['url'])
-                print(m3u8_url)
-            except:
-                print('err', hanju)
-                import traceback
-                print(traceback.format_exc())
+        try:
+            for hanju in hanjus:
+                hanju_path = root_path + os.path.sep + hanju['title']
+                if not os.path.exists(hanju_path):
+                    os.mkdir(hanju_path)
+                try:
+                    for juji in get_hanju_jujis(hanju['url']):
+                        m3url = get_m3u8(juji[0])
+                        if not os.path.exists(hanju_path + os.path.sep + juji[1] + '.mp4'):
+                            print('Downloading...', hanju_path + os.path.sep + juji[1] + '.mp4')
+                            download_m3u8_video([m3url, ], [juji[1], ])
+                            shutil.move(os.path.split(os.path.abspath(__file__))[0] + os.path.sep + juji[1] + '.mp4', hanju_path)
+                except: pass
+        except: pass

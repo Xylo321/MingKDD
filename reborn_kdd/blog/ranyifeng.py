@@ -21,7 +21,7 @@ def pag_article_list(url):
                      verify=False,
                      headers={
                          "connection": "close",
-                         # "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36"
+                         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36"
                      })
     r.encoding = 'utf-8'
     page = etree.HTML(r.text)
@@ -40,5 +40,7 @@ def pag_article_list(url):
 
 
 if __name__ == '__main__':
+    import time
     for url in get_categories():
         print(pag_article_list(url))
+        time.sleep(5)
