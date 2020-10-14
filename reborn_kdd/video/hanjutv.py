@@ -75,7 +75,7 @@ def get_m3u8(go_play_url):
 if __name__ == '__main__':
     import os
     import shutil
-    from reborn_kdd.utils.m3u8 import download_m3u8_video
+    from reborn_kdd.utils.m3u8.m3u8 import download_m3u8_video
 
     root_path = '../../download/'
     hanjus, last_page = get_hanjus()
