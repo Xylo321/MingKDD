@@ -2,7 +2,8 @@ import os
 import re
 import queue
 import requests
-import shutil
+
+requests.packages.urllib3.disable_warnings()
 from concurrent.futures import ThreadPoolExecutor
 
 
@@ -44,16 +45,16 @@ class M3u8Download:
         self.headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) \
         AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.105 Safari/537.36'}
 
-        requests.packages.urllib3.disable_warnings()
+        try:
+            self.get_m3u8_info(self.url, self.num_retries)
+            with _ThreadPoolExecutorWithQueueSizeLimit(self.max_workers) as pool:
+                for ts_url, auto_id in zip(self.ts_url_list, range(0, len(self.ts_url_list))):
+                    pool.submit(self.download_ts, ts_url, auto_id, self.num_retries)
 
-        self.get_m3u8_info(self.url, self.num_retries)
-        with _ThreadPoolExecutorWithQueueSizeLimit(self.max_workers) as pool:
-            for ts_url, auto_id in zip(self.ts_url_list, range(0, len(self.ts_url_list))):
-                pool.submit(self.download_ts, ts_url, auto_id, self.num_retries)
-
-        if self.success_sum == self.ts_sum:
-            self.output_mp4()
-
+            if self.success_sum == self.ts_sum:
+                self.output_mp4()
+        finally:
+            os.system(f'rm -rf ./{self.name} ./{self.name}.m3u8')
 
     def get_m3u8_info(self, m3u8_url, num_retries):
         """
@@ -77,8 +78,6 @@ class M3u8Download:
                 m3u8_text_str = res.text
                 self.get_ts_url(m3u8_text_str)
         except Exception as e:
-            # import traceback
-            # print(traceback.format_exc())
             if num_retries > 0:
                 self.get_m3u8_info(m3u8_url, num_retries - 1)
 
@@ -135,8 +134,6 @@ class M3u8Download:
             else:
                 self.success_sum += 1
         except Exception:
-            # import traceback
-            # print(traceback.format_exc())
             if os.path.exists(f"./{self.name}/{save_ts_name}"):
                 os.remove(f"./{self.name}/{save_ts_name}")
             if num_retries > 0:
@@ -161,8 +158,6 @@ class M3u8Download:
             res.close()
             return f'{key_line.split(mid_part)[0]}URI="./{self.name}/key"{key_line.split(mid_part)[-1]}'
         except Exception as e:
-            # import traceback
-            # print(traceback.format_exc())
             if os.path.exists(f"./{self.name}/key"):
                 os.remove(f"./{self.name}/key")
             print("加密视频,无法加载key,揭秘失败")
@@ -179,9 +174,7 @@ class M3u8Download:
         )
         print(cmd)
         os.system(cmd)
-        os.system(f'rm -rf ./{self.name} ./{self.name}.m3u8')
         print(f"Download successfully --> {self.name}")
-
 
 
 def download_m3u8_video(url_list, name_list):
@@ -196,7 +189,6 @@ def download_m3u8_video(url_list, name_list):
                      )
 
         start_num += 1
-
 
 
 if __name__ == '__main__':
