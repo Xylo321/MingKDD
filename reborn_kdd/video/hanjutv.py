@@ -8,10 +8,6 @@ https://meiju11.zzwc120.com/20200328/U08z7Ea8/2000kb/hls/index.m3u8?wsSecret=6ae
 
 https://meiju11.zzwc120.com/20200328/U08z7Ea8/2000kb/hls/cKV1nNzk.js
 https://meiju11.zzwc120.com/20200328/U08z7Ea8/2000kb/hls/zsvWwkxg.js
-
-清单文件与网络监控列表是乱序的，意味着必须开发一个demo这种视频网站才能彻底搞清楚内幕。
-
-不急。
 """
 
 import requests
@@ -37,7 +33,6 @@ def get_hanjus(page=1):
         last_page = body_dom.cssselect('.mod-pagination > ul > li > a')[-1].get('data-ci-pagination-page')
     if page == 1 and last_page is None: raise
     return [{"title": hanju_dom.get('title'), "url": ROOT_URL + hanju_dom.get('href')} for hanju_dom in hanju_doms], int(last_page)
-
 
 
 def get_hanju_jujis(hanju_url):

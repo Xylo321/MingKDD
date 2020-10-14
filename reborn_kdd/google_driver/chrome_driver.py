@@ -76,7 +76,7 @@ class ChromeDriver(object):
 if __name__ == '__main__':
     cd = ChromeDriver(headless=False)
     try:
-        cd.open("https://cn.mouser.com")
+        cd.open("https://cn.mouser.com", 30)
     except:
         print(traceback.format_exc())
     finally:
