@@ -55,6 +55,11 @@ class M3u8Download:
                 self.output_mp4()
         finally:
             os.system(f'rm -rf ./{self.name} ./{self.name}.m3u8')
+            cwp = os.path.split(os.path.abspath(__file__))[0] + os.path.sep
+            task_dir = cwp + self.name
+            m3u8_file = cwp + self.name + '.m3u8'
+            if os.path.exists(task_dir): os.remove(task_dir)
+            if os.path.exists(m3u8_file): os.remove(m3u8_file)
 
     def get_m3u8_info(self, m3u8_url, num_retries):
         """
@@ -127,7 +132,7 @@ class M3u8Download:
                             if chunk:
                                 ts.write(chunk)
                     self.success_sum += 1
-                    print(f"\rDownloading {self.name}：{self.success_sum}/{self.ts_sum}\t", end='')
+                    print(f"Downloading {self.name}：{self.success_sum}/{self.ts_sum}")
                 else:
                     self.download_ts(ts_url, save_ts_name, num_retries - 1)
                 res.close()
@@ -172,20 +177,19 @@ class M3u8Download:
         cmd = "%s -allowed_extensions ALL -i %s.m3u8 -acodec copy -vcodec copy -f mp4 %s.mp4" % (
             cmd_path, self.name, self.name
         )
-        print(cmd)
         os.system(cmd)
         print(f"Download successfully --> {self.name}")
 
 
-def download_m3u8_video(url_list, name_list):
+def download_m3u8_video(url_list, name_list, mw=30, nr=5):
     # 如果M3U8_URL的数量 ≠ SAVE_NAME的数量
     # 下载一部电视剧时，只需要输入一个name就可以了
     start_num = 1
     for i in range(len(url_list)):
         M3u8Download(url_list[i],
                      name_list[i] if len(url_list) == len(name_list) else f"{name_list[0]}{start_num:02}",
-                     max_workers=64,
-                     num_retries=30
+                     max_workers=mw,
+                     num_retries=nr
                      )
 
         start_num += 1

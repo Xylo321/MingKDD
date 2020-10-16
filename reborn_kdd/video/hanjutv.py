@@ -12,6 +12,11 @@ https://meiju11.zzwc120.com/20200328/U08z7Ea8/2000kb/hls/zsvWwkxg.js
 
 import requests
 from lxml import etree
+import os
+import shutil
+from threading import Thread
+from reborn_kdd.utils.m3u8.m3u8 import download_m3u8_video
+
 
 ROOT_URL = 'https://www.hanjutv.com'
 
@@ -72,16 +77,23 @@ def get_m3u8(go_play_url):
     raise
 
 
-if __name__ == '__main__':
-    import os
-    import shutil
-    from reborn_kdd.utils.m3u8.m3u8 import download_m3u8_video
+def _task(hanju_path, hanju, juji):
+    m3url = get_m3u8(juji[0])
+    file_name = hanju['title'] + f'(第{juji[1]}集)'
+    if not os.path.exists(hanju_path + os.path.sep + file_name + '.mp4'):
+        print('Downloading...', hanju_path + os.path.sep + juji[1] + '.mp4')
+        download_m3u8_video([m3url, ], [file_name, ])
+        shutil.move(os.path.split(os.path.abspath(__file__))[0] + os.path.sep + file_name + '.mp4', hanju_path)
 
-    root_path = '../../download/'
+
+def download(root_path='../../download/韩剧TV/'):
+    if not os.path.exists(root_path): os.mkdir(root_path)
+
     hanjus, last_page = get_hanjus()
-    print(hanjus, last_page)
+
     for page in range(1, last_page + 1):
-        hanjus, last_page = get_hanjus(page)
+        if page != 1:
+            hanjus, last_page = get_hanjus(page)
         print(hanjus)
         try:
             for hanju in hanjus:
@@ -89,11 +101,15 @@ if __name__ == '__main__':
                 if not os.path.exists(hanju_path):
                     os.mkdir(hanju_path)
                 try:
+                    ts = []
                     for juji in get_hanju_jujis(hanju['url']):
-                        m3url = get_m3u8(juji[0])
-                        if not os.path.exists(hanju_path + os.path.sep + juji[1] + '.mp4'):
-                            print('Downloading...', hanju_path + os.path.sep + juji[1] + '.mp4')
-                            download_m3u8_video([m3url, ], [juji[1], ])
-                            shutil.move(os.path.split(os.path.abspath(__file__))[0] + os.path.sep + juji[1] + '.mp4', hanju_path)
+                        t = Thread(target=_task, args=(hanju_path, hanju, juji))
+                        t.start()
+                        ts.append(t)
+                    for t in ts: t.join()
                 except: pass
         except: pass
+
+
+if __name__ == '__main__':
+    download()
