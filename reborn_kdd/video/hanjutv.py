@@ -14,7 +14,7 @@ import requests
 from lxml import etree
 import os
 import shutil
-from threading import Thread
+import traceback
 from reborn_kdd.utils.m3u8.m3u8 import download_m3u8_video
 
 
@@ -83,10 +83,13 @@ def _task(hanju_path, hanju, juji):
     if not os.path.exists(hanju_path + os.path.sep + file_name + '.mp4'):
         print('Downloading...', hanju_path + os.path.sep + juji[1] + '.mp4')
         download_m3u8_video([m3url, ], [file_name, ])
-        shutil.move(os.path.split(os.path.abspath(__file__))[0] + os.path.sep + file_name + '.mp4', hanju_path)
+        shutil.move(os.getcwd() + os.path.sep + file_name + '.mp4', hanju_path)
+        print('Download Completely.', file_name)
 
 
-def download(root_path='../../download/韩剧TV/'):
+def download_all(root_path='../../download/韩剧TV/'):
+    """整站下载所有韩剧
+    """
     if not os.path.exists(root_path): os.mkdir(root_path)
 
     hanjus, last_page = get_hanjus()
@@ -101,15 +104,26 @@ def download(root_path='../../download/韩剧TV/'):
                 if not os.path.exists(hanju_path):
                     os.mkdir(hanju_path)
                 try:
-                    ts = []
                     for juji in get_hanju_jujis(hanju['url']):
-                        t = Thread(target=_task, args=(hanju_path, hanju, juji))
-                        t.start()
-                        ts.append(t)
-                    for t in ts: t.join()
-                except: pass
-        except: pass
+                        _task(hanju_path, hanju, juji)
+                except:
+                    print(traceback.format_exc())
+        except:
+            print(traceback.format_exc())
+
+
+def download_one(juji_url, hanju_title, root_path='../../download/韩剧TV/'):
+    """指定名的韩剧下载
+    """
+    hanju_path = root_path + os.path.sep + hanju_title
+    if not os.path.exists(hanju_path):
+        os.mkdir(hanju_path)
+    try:
+        for juji in get_hanju_jujis(juji_url):
+            _task(hanju_path, {'title': hanju_title}, juji)
+    except: pass
 
 
 if __name__ == '__main__':
-    download()
+    download_all()
+    # download_one('https://www.hanjutv.com/hanju/2406.html', '天国的阶梯')

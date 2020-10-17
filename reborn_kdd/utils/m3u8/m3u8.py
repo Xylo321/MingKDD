@@ -2,6 +2,7 @@ import os
 import re
 import queue
 import requests
+import shutil
 
 requests.packages.urllib3.disable_warnings()
 from concurrent.futures import ThreadPoolExecutor
@@ -54,12 +55,14 @@ class M3u8Download:
             if self.success_sum == self.ts_sum:
                 self.output_mp4()
         finally:
-            os.system(f'rm -rf ./{self.name} ./{self.name}.m3u8')
-            cwp = os.path.split(os.path.abspath(__file__))[0] + os.path.sep
+            # os.system(f'rm -rf ./{self.name} ./{self.name}.m3u8')
+            cwp = os.getcwd() + os.path.sep
             task_dir = cwp + self.name
             m3u8_file = cwp + self.name + '.m3u8'
-            if os.path.exists(task_dir): os.remove(task_dir)
-            if os.path.exists(m3u8_file): os.remove(m3u8_file)
+            if os.path.exists(task_dir):
+                shutil.rmtree(task_dir)
+            if os.path.exists(m3u8_file):
+                os.remove(m3u8_file)
 
     def get_m3u8_info(self, m3u8_url, num_retries):
         """
