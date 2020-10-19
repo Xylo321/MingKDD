@@ -15,7 +15,7 @@ from lxml import etree
 import os
 import shutil
 import traceback
-from reborn_kdd.utils.m3u8.m3u8 import download_m3u8_video
+from ming_kdd.utils.m3u8.m3u8 import download_m3u8_video
 
 
 ROOT_URL = 'https://www.hanjutv.com'

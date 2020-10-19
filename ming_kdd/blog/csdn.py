@@ -1,7 +1,7 @@
 import time
 import traceback
 
-from reborn_kdd.utils.google_driver.chrome_driver import ChromeDriver
+from ming_kdd.utils.google_driver.chrome_driver import ChromeDriver
 
 
 class CSDN(object):

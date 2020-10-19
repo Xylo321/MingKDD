@@ -197,7 +197,7 @@ if __name__ == '__main__':
             pass
 
     import os
-    from reborn_kdd.utils import download_file
+    from ming_kdd.utils import download_file
     from threading import Thread
 
     root_path = '../../download/唯一图库'
