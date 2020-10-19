@@ -1,12 +1,12 @@
 from setuptools import find_packages, setup
 
 setup(
-    name='reborn-kdd',
+    name='MingKDD',
     version='1.0.1',
     url='',
     license='',
-    maintainer='zswj123',
-    maintainer_email='l2se@sina.cn',
+    maintainer='kael',
+    maintainer_email='congshi.hello@gmail.com',
     description='',
     long_description='',
     packages=find_packages(),
