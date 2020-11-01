@@ -21,3 +21,5 @@ BLOG_MYSQL_CONFIG = {
     "db": "blog",
     "size": 5
 }
+
+ROBOT = 0
