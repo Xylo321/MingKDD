@@ -17,6 +17,6 @@ setup(
         "requests",
         "lxml",
         "cssselect",
-        "flask"
+        "mingmq"
     ]
 )
