@@ -62,9 +62,9 @@ def _task(mq_res, queue_name, lock, sig):
             if category.exist(category_id) is not None:
                 for mes in message:
                     title = mes['title']
-                    is_public = 1
+                    is_public = 0
                     url = mes['url']
-                    content = '# %s\n**转载**\n文章地址：%s\n<iframe src="%s"></iframe>' % (title, url, url)
+                    content = '# %s\n**转载**\n文章地址：%s\n<iframe sandbox="allow-forms allow-scripts allow-same-origin" src="%s"></iframe>' % (title, url, url)
                     date = int(time.time())
                     args.append((title, category_id, is_public, content, date, url, ROBOT))
 
