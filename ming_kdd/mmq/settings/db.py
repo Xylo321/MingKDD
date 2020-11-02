@@ -19,7 +19,7 @@ BLOG_MYSQL_CONFIG = {
     "user": "root",
     "passwd": "mm5201314",
     "db": "blog",
-    "size": 5
+    "size": 1
 }
 
 ROBOT = 0

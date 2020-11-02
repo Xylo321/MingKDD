@@ -37,7 +37,7 @@ def _task(mq_res, queue_name, lock, sig):
     if mq_res and mq_res['status'] != FAIL:
         b = False
         try:
-            message_data = json.loads(mq_res['json_obj'][0]['message_data'])
+            message_data = mq_res['json_obj'][0]['message_data']
             category_id: int = message_data['category_id']
             if category_id == 40:  # 王垠
                 # [{'title': xxx, 'url': xxx}]
@@ -116,13 +116,13 @@ def main(debug=logging.DEBUG) -> None:
     try:
         _init_mingmq_pool()
         # 测试
-        _MINGMQ_POOL.opera('send_data_to_queue', *(MINGMQ_CONFIG['get_article_category']['queue_name'], json.dumps({
+        _MINGMQ_POOL.opera('send_data_to_queue', *(MINGMQ_CONFIG['get_article_category']['queue_name'], {
             "category_id": 40
-        })))
+        }))
 
-        _MINGMQ_POOL.opera('send_data_to_queue', *(MINGMQ_CONFIG['get_article_category']['queue_name'], json.dumps({
+        _MINGMQ_POOL.opera('send_data_to_queue', *(MINGMQ_CONFIG['get_article_category']['queue_name'], {
             "category_id": 39
-        })))
+        }))
 
         _get_data_from_queue(MINGMQ_CONFIG['get_article_category']['queue_name'])
     except:

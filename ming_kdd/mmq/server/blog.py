@@ -1,4 +1,3 @@
-import json
 import logging
 import traceback
 from threading import Thread, Lock
@@ -9,6 +8,7 @@ from mingmq.client import Pool as MingMQPool
 from mingmq.message import FAIL
 from ming_kdd.mmq.settings.db import BLOG_MYSQL_CONFIG
 from ming_kdd.mmq.db.blog import Article, Category
+from ming_kdd.mmq.settings.db import ROBOT
 from ming_kdd.mmq.db.rdbms import MySQLPool
 
 
@@ -19,6 +19,7 @@ _LOGGER = logging.getLogger('blog_get_article_category_consumer')
 
 
 def _init_mysql_pool() -> None:
+    global _BLOG_MYSQL_POOL
     _BLOG_MYSQL_POOL = MySQLPool(host=BLOG_MYSQL_CONFIG['host'],
                                   user=BLOG_MYSQL_CONFIG['user'],
                                   passwd=BLOG_MYSQL_CONFIG['passwd'],
@@ -44,13 +45,15 @@ def _release_mingmq_pool() -> None:
 
 
 def _task(mq_res, queue_name, lock, sig):
+    global _BLOG_MYSQL_POOL
+
     with lock:
         sig -= 1
 
     if mq_res and mq_res['status'] != FAIL:
         b = False
         try:
-            message_data = json.loads(mq_res['json_obj'][0]['message_data'])
+            message_data = mq_res['json_obj'][0]['message_data']
             category_id: int = message_data['category_id']
             message: list = message_data['message']
             category = Category(_BLOG_MYSQL_POOL)
@@ -63,8 +66,7 @@ def _task(mq_res, queue_name, lock, sig):
                     url = mes['url']
                     content = '# %s\n <iframe src="%s"></iframe>' % (title, url)
                     date = int(time.time())
-                    downloaded = 0
-                    args.append([title, is_public, content, date, category_id, url, downloaded])
+                    args.append((title, category_id, is_public, content, date, url, ROBOT))
 
                 article.add_articles(args)
                 _LOGGER.debug('增加到mysql中到数据为: %s', str(args))

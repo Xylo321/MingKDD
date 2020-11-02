@@ -1,12 +1,11 @@
 from ming_kdd.mmq.db.rdbms import MySQLBase
-from ming_kdd.mmq.settings.db import ROBOT
 
 
 class Article(MySQLBase):
-    def add_articles(self, args):
+    def add_articles(self, args: list):
         sql = ('insert ignore into article_s(title, category_id, is_public, content, date, url, user_id)'
-               ' value(%s, %s, %s, %s, %s, %s, %s)')
-        self.rdbms_pool.edit_many(sql, args=args)
+               ' values(%s, %s, %s, %s, %s, %s, %s)')
+        self.rdbms_pool.edit_many(sql, args)
 
 
 class Category(MySQLBase):

@@ -4,7 +4,7 @@ MINGMQ_CONFIG = {
         'port': 15673,
         'user_name': 'mingmq',
         'passwd': 'mm5201314',
-        'pool_size': 10,
+        'pool_size': 1,
         'queue_name': 'kael_add_article'
     },
     'add_photo': {
