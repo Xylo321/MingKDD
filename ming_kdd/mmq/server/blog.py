@@ -64,7 +64,7 @@ def _task(mq_res, queue_name, lock, sig):
                     title = mes['title']
                     is_public = 1
                     url = mes['url']
-                    content = '# %s\n <iframe src="%s"></iframe>' % (title, url)
+                    content = '# %s\n转载\n文章地址：%s\n<iframe src="%s"></iframe>' % (title, url, url)
                     date = int(time.time())
                     args.append((title, category_id, is_public, content, date, url, ROBOT))
 
