@@ -1,32 +1,19 @@
-from ming_kdd.mmq.settings.db import BLOG_MYSQL_CONFIG
-from ming_kdd.mmq.db.rdbms import MySQLPool
-from ming_kdd.mmq.db.blog import Article
-from ming_kdd.mmq.settings.mq_cli import MINGMQ_CONFIG
-from mingmq.client import Pool as MingMQPool
-from mingmq.message import FAIL
 import json
 import logging
 import traceback
+from threading import Thread, Lock
 import time
 
+from ming_kdd.mmq.settings.mq_cli import MINGMQ_CONFIG
+from ming_kdd.mmq.settings.mq_serv import MINGMQ_CONFIG as SERV_MC
+from mingmq.client import Pool as MingMQPool
+from mingmq.message import FAIL
+from ming_kdd.blog import ranyifeng, wangyin
 
-_BLOG_MYSQL_POOL: MySQLPool = None
+
 _MINGMQ_POOL = None
 
 _LOGGER = logging.getLogger('blog_get_article_category_consumer')
-
-
-def _init_mysql_pool() -> None:
-    global _IMAGE_MYSQL_POOL, _VIDEO_MYSQL_POOL
-    _BLOG_MYSQL_POOL = MySQLPool(host=BLOG_MYSQL_CONFIG['host'],
-                                  user=BLOG_MYSQL_CONFIG['user'],
-                                  passwd=BLOG_MYSQL_CONFIG['passwd'],
-                                  db=BLOG_MYSQL_CONFIG['db'],
-                                  size=BLOG_MYSQL_CONFIG['size'])
-
-def _release_mysql_pool() -> None:
-    global _BLOG_MYSQL_POOL
-    _BLOG_MYSQL_POOL.release()
 
 
 def _init_mingmq_pool() -> None:
@@ -43,46 +30,109 @@ def _release_mingmq_pool() -> None:
     _MINGMQ_POOL.release()
 
 
+def _task(mq_res, queue_name, lock, sig):
+    with lock:
+        sig -= 1
+
+    if mq_res and mq_res['status'] != FAIL:
+        b = False
+        try:
+            message_data = json.loads(mq_res['json_obj'][0]['message_data'])
+            category_id: int = message_data['category_id']
+            if category_id == 40:  # 王垠
+                # [{'title': xxx, 'url': xxx}]
+                message = wangyin.pag_article_list()
+                _LOGGER.debug('抓取到王垠的数据为: %s', str(message))
+                mq_res1 = _MINGMQ_POOL.opera('send_data_to_queue', *(SERV_MC['add_article']['queue_name'], {
+                    'category_id': category_id,
+                    'message': message
+                }))
+                _LOGGER.debug('推送到消息队列的数据为: %s', str({
+                    'category_id': category_id,
+                    'message': message
+                }))
+
+                if mq_res1 and mq_res1['status'] != FAIL:
+                    b = True
+            elif category_id == 39:  # 阮一峰
+                message = []
+                for url in ranyifeng.get_categories():
+                    message += ranyifeng.pag_article_list(url)
+                    time.sleep(5)
+                _LOGGER.debug('抓取到阮一峰的数据为: %s', str(message))
+                mq_res1 = _MINGMQ_POOL.opera('send_data_to_queue', *(SERV_MC['add_article']['queue_name'], {
+                    'category_id': category_id,
+                    'message': message
+                }))
+                _LOGGER.debug('推送到消息队列的数据为: %s', str({
+                    'category_id': category_id,
+                    'message': message
+                }))
+                if mq_res1 and mq_res1['status'] != FAIL:
+                    b = True
+            else:
+                raise Exception('不合法的category_id')
+        except Exception as e:
+            _LOGGER.debug('XX: 失败，推送到消息队列的数据为: %s，错误信息: %s', str(mq_res), str(e))
+        finally:
+            if b == True:
+                message_id = mq_res['json_obj'][0]['message_id']
+                try:
+                    mq_res = _MINGMQ_POOL.opera('ack_message', *(queue_name, message_id))
+                    if mq_res and mq_res['status'] != FAIL:
+                        _LOGGER.debug('消息确认成功')
+                    raise Exception()
+                except Exception as e:
+                    _LOGGER.debug('XX: 失败，消息确认失败: %s，错误信息: %s，队列: %s', str(message_id), str(e), queue_name)
+            with lock:
+                sig += 1
+
+
 def _get_data_from_queue(queue_name):
     global _MINGMQ_POOL, _LOGGER
     _MINGMQ_POOL.opera('declare_queue', *(queue_name,))
-    while True:
-        mq_res: dict = _MINGMQ_POOL.opera('get_data_from_queue', *(queue_name, ))
-        _LOGGER.debug('从消息队列中获取的消息为: %s', mq_res)
+    _MINGMQ_POOL.opera('declare_queue', *(SERV_MC['add_article']['queue_name'],))
 
-        if mq_res and mq_res['status'] != FAIL:
-            message_data = json.loads(mq_res['json_obj'][0]['message_data'])
-            user_id: int = message_data['user_id']
-            category_id: int = message_data['category_id']
-            db_name: str = message_data['db_name']
-            b: bool = _delete_file_by_category_id_db_name(category_id, user_id, db_name)
-            if b == True:
-                message_id = mq_res['json_obj'][0]['message_id']
-                mq_res = _MINGMQ_POOL.opera('ack_message', *(queue_name, message_id))
-                if mq_res and mq_res['status'] != FAIL:
-                    _LOGGER.debug('消息确认成功')
-                else:
-                    _LOGGER.error('消息确认失败: queue_name=%s, message_id=%s', queue_name, message_id)
-        else:
-            time.sleep(10)
+    sig = MINGMQ_CONFIG['get_article_category']['pool_size']
+    lock = Lock()
+
+    while True:
+        if sig != 0:
+            try:
+                mq_res: dict = _MINGMQ_POOL.opera('get_data_from_queue', *(queue_name, ))
+                _LOGGER.debug('从消息队列中获取的消息为: %s', mq_res)
+            except Exception as e:
+                _LOGGER.debug('XX: 从消息队列中获取任务失败，错误信息: %s', str(e))
+            try:
+                Thread(target=_task, args=(mq_res, queue_name, lock, sig)).start()
+            except Exception as e:
+                _LOGGER.debug("XX: 线程在执行过程中出现异常，错误信息为: %s", str(e))
+        time.sleep(10)
 
 
 def main(debug=logging.DEBUG) -> None:
     logging.basicConfig(level=debug)
     global _LOGGER
     try:
-        _init_mysql_pool()
         _init_mingmq_pool()
+        # 测试
+        _MINGMQ_POOL.opera('send_data_to_queue', *(MINGMQ_CONFIG['get_article_category']['queue_name'], json.dumps({
+            "category_id": 40
+        })))
+
+        _MINGMQ_POOL.opera('send_data_to_queue', *(MINGMQ_CONFIG['get_article_category']['queue_name'], json.dumps({
+            "category_id": 39
+        })))
 
         _get_data_from_queue(MINGMQ_CONFIG['get_article_category']['queue_name'])
     except:
         _LOGGER.error(traceback.format_exc())
         try:
             _release_mingmq_pool()
-            _release_mysql_pool()
         except:
             _LOGGER.error(traceback.format_exc())
 
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG)
     main()
