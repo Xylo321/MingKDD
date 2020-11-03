@@ -1,3 +1,4 @@
+import json
 import logging
 import traceback
 from threading import Thread, Lock
@@ -42,10 +43,10 @@ def _task(mq_res, queue_name, lock, sig):
                 # [{'title': xxx, 'url': xxx}]
                 message = wangyin.pag_article_list()
                 _LOGGER.debug('抓取到王垠的数据为: %s', str(message))
-                mq_res1 = _MINGMQ_POOL.opera('send_data_to_queue', *(SERV_MC['add_article']['queue_name'], {
+                mq_res1 = _MINGMQ_POOL.opera('send_data_to_queue', *(SERV_MC['add_article']['queue_name'], json.dumps({
                     'category_id': category_id,
                     'message': message
-                }))
+                })))
                 _LOGGER.debug('推送到消息队列的数据为: %s', str({
                     'category_id': category_id,
                     'message': message
@@ -59,10 +60,10 @@ def _task(mq_res, queue_name, lock, sig):
                     message += ranyifeng.pag_article_list(url)
                     time.sleep(5)
                 _LOGGER.debug('抓取到阮一峰的数据为: %s', str(message))
-                mq_res1 = _MINGMQ_POOL.opera('send_data_to_queue', *(SERV_MC['add_article']['queue_name'], {
+                mq_res1 = _MINGMQ_POOL.opera('send_data_to_queue', *(SERV_MC['add_article']['queue_name'], json.dumps({
                     'category_id': category_id,
                     'message': message
-                }))
+                })))
                 _LOGGER.debug('推送到消息队列的数据为: %s', str({
                     'category_id': category_id,
                     'message': message
@@ -115,13 +116,13 @@ def main(debug=logging.DEBUG) -> None:
     try:
         _init_mingmq_pool()
         # 测试
-        _MINGMQ_POOL.opera('send_data_to_queue', *(MINGMQ_CONFIG['get_article_category']['queue_name'], {
+        _MINGMQ_POOL.opera('send_data_to_queue', *(MINGMQ_CONFIG['get_article_category']['queue_name'], json.dumps({
             "category_id": 40
-        }))
+        })))
 
-        _MINGMQ_POOL.opera('send_data_to_queue', *(MINGMQ_CONFIG['get_article_category']['queue_name'], {
+        _MINGMQ_POOL.opera('send_data_to_queue', *(MINGMQ_CONFIG['get_article_category']['queue_name'], json.dumps({
             "category_id": 39
-        }))
+        })))
 
         _get_data_from_queue(MINGMQ_CONFIG['get_article_category']['queue_name'])
     except:

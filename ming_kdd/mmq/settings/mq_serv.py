@@ -5,7 +5,7 @@ MINGMQ_CONFIG = {
         'user_name': 'mingmq',
         'passwd': 'mm5201314',
         'pool_size': 1,
-        'queue_name': 'kael_add_article'
+        'queue_name': 'ming_kdd_add_article'
     },
     'add_photo': {
         'host': 'serv_pro',
@@ -13,7 +13,7 @@ MINGMQ_CONFIG = {
         'user_name': 'mingmq',
         'passwd': 'mm5201314',
         'pool_size': 10,
-        'queue_name': 'kael_add_photo'
+        'queue_name': 'ming_kdd_add_photo'
     },
     'add_video': {
         'host': 'serv_pro',
@@ -21,6 +21,6 @@ MINGMQ_CONFIG = {
         'user_name': 'mingmq',
         'passwd': 'mm5201314',
         'pool_size': 10,
-        'queue_name': 'kael_add_video'
+        'queue_name': 'ming_kdd_add_video'
     }
 }

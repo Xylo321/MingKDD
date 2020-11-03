@@ -87,10 +87,10 @@ def _task(hanju_path, hanju, juji):
         print('Download Completely.', file_name)
 
 
-def download_all(root_path='../../download/韩剧TV/'):
+def download_all(root_path='../download/韩剧TV/'):
     """整站下载所有韩剧
     """
-    if not os.path.exists(root_path): os.mkdir(root_path)
+    if not os.path.exists(root_path): os.makedirs(root_path)
 
     hanjus, last_page = get_hanjus()
 
@@ -112,9 +112,11 @@ def download_all(root_path='../../download/韩剧TV/'):
             print(traceback.format_exc())
 
 
-def download_one(juji_url, hanju_title, root_path='../../download/韩剧TV/'):
+def download_one(juji_url, hanju_title, root_path='../download/韩剧TV/'):
     """指定名的韩剧下载
     """
+    if not os.path.exists(root_path): os.makedirs(root_path)
+
     hanju_path = root_path + os.path.sep + hanju_title
     if not os.path.exists(hanju_path):
         os.mkdir(hanju_path)
