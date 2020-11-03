@@ -93,7 +93,7 @@ def _get_data_from_queue(queue_name):
     _MINGMQ_POOL.opera('declare_queue', *(queue_name,))
     _MINGMQ_POOL.opera('declare_queue', *(SERV_MC['add_article']['queue_name'],))
 
-    sig = MINGMQ_CONFIG['get_article_category']['pool_size']
+    sig = MINGMQ_CONFIG['get_article_category']['pool_size'] - 1
     lock = Lock()
 
     while True:
