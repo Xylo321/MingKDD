@@ -43,6 +43,8 @@ class M3u8Download:
         self.ts_url_list = []
         self.success_sum = 0
         self.ts_sum = 0
+
+        self.download_success = False
         self.headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) \
         AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.105 Safari/537.36'}
 
@@ -182,20 +184,24 @@ class M3u8Download:
         )
         os.system(cmd)
         print(f"Download successfully --> {self.name}")
+        self.download_success = True
 
 
 def download_m3u8_video(url_list, name_list, mw=30, nr=5):
     # 如果M3U8_URL的数量 ≠ SAVE_NAME的数量
     # 下载一部电视剧时，只需要输入一个name就可以了
     start_num = 1
+    md = None
     for i in range(len(url_list)):
-        M3u8Download(url_list[i],
-                     name_list[i] if len(url_list) == len(name_list) else f"{name_list[0]}{start_num:02}",
-                     max_workers=mw,
-                     num_retries=nr
-                     )
+        md = M3u8Download(url_list[i],
+                         name_list[i] if len(url_list) == len(name_list) else f"{name_list[0]}{start_num:02}",
+                         max_workers=mw,
+                         num_retries=nr
+                         )
 
         start_num += 1
+
+    return md.download_success
 
 
 if __name__ == '__main__':

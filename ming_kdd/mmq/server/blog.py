@@ -1,7 +1,9 @@
+import json
 import logging
 import traceback
 from threading import Thread, Lock
 import time
+import sys
 
 from ming_kdd.mmq.settings.mq_serv import MINGMQ_CONFIG
 from mingmq.client import Pool as MingMQPool
@@ -12,10 +14,10 @@ from ming_kdd.mmq.settings.db import ROBOT
 from ming_kdd.mmq.db.rdbms import MySQLPool
 
 
-_BLOG_MYSQL_POOL = None
+_VIDEO_MYSQL_POOL = None
 _MINGMQ_POOL = None
 
-_LOGGER = logging.getLogger('blog_get_article_category_consumer')
+_LOGGER = logging.getLogger('blog_add_article_consumer')
 
 
 def _init_mysql_pool() -> None:
@@ -53,7 +55,7 @@ def _task(mq_res, queue_name, lock, sig):
     if mq_res and mq_res['status'] != FAIL:
         b = False
         try:
-            message_data = mq_res['json_obj'][0]['message_data']
+            message_data = json.loads(mq_res['json_obj'][0]['message_data'])
             category_id: int = message_data['category_id']
             message: list = message_data['message']
             category = Category(_BLOG_MYSQL_POOL)
@@ -97,9 +99,12 @@ def _get_data_from_queue(queue_name):
     lock = Lock()
 
     while True:
-        if sig != 0:
+        if sig > 0:
             try:
                 mq_res: dict = _MINGMQ_POOL.opera('get_data_from_queue', *(queue_name, ))
+                if mq_res is None:
+                    _LOGGER.debug('服务器意外关闭')
+                    sys.exit(1)
                 _LOGGER.debug('从消息队列中获取的消息为: %s', mq_res)
             except Exception as e:
                 _LOGGER.debug('XX: 从消息队列中获取任务失败，错误信息: %s', str(e))

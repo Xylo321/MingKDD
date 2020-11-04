@@ -18,15 +18,12 @@ setup(
         "lxml",
         "cssselect",
         "mingmq",
-        "PyMySQL"
+        "PyMySQL",
+        "mingdfs"
     ],
     entry_points="""
     [console_scripts]
     blog_get_article_category_consumer = ming_kdd.mmq.client.blog:main
-    blog_get_photo_category_consumer = ming_kdd.mmq.client.image:main
-    blog_get_video_category_consumer = ming_kdd.mmq.client.video:main
     blog_add_article_consumer = ming_kdd.mmq.server.blog:main
-    blog_add_photo_category_consumer = ming_kdd.mmq.server.image:main
-    blog_add_video_category_consumer = ming_kdd.mmq.server.video:main
     """
 )

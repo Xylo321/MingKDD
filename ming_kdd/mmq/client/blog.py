@@ -3,6 +3,7 @@ import logging
 import traceback
 from threading import Thread, Lock
 import time
+import sys
 
 from ming_kdd.mmq.settings.mq_cli import MINGMQ_CONFIG
 from ming_kdd.mmq.settings.mq_serv import MINGMQ_CONFIG as SERV_MC
@@ -37,7 +38,7 @@ def _task(mq_res, queue_name, lock, sig):
     if mq_res and mq_res['status'] != FAIL:
         b = False
         try:
-            message_data = mq_res['json_obj'][0]['message_data']
+            message_data = json.loads(mq_res['json_obj'][0]['message_data'])
             category_id: int = message_data['category_id']
             if category_id == 40:  # 王垠
                 # [{'title': xxx, 'url': xxx}]
@@ -100,6 +101,9 @@ def _get_data_from_queue(queue_name):
         if sig != 0:
             try:
                 mq_res: dict = _MINGMQ_POOL.opera('get_data_from_queue', *(queue_name, ))
+                if mq_res is None:
+                    _LOGGER.error('服务器意外关闭')
+                    sys.exit(1)
                 _LOGGER.debug('从消息队列中获取的消息为: %s', mq_res)
             except Exception as e:
                 _LOGGER.debug('XX: 从消息队列中获取任务失败，错误信息: %s', str(e))
