@@ -105,7 +105,6 @@ def _task(mq_res, queue_name, lock, sig):
 
 def _get_data_from_queue(queue_name):
     global _MINGMQ_POOL, _LOGGER
-    _MINGMQ_POOL.opera('declare_queue', *(MINGMQ_CONFIG['download']['queue_name'],))
 
     sig = MINGMQ_CONFIG['download']['pool_size']
     lock = Lock()

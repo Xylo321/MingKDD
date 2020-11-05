@@ -1,6 +1,6 @@
 import logging
 import traceback
-from threading import Thread, Lock
+from threading import Thread, Lock, get_ident, active_count
 import time
 import json
 
@@ -15,7 +15,7 @@ from ming_kdd.mmq.db.rdbms import MySQLPool
 _VIDEO_MYSQL_POOL = None
 _MINGMQ_POOL = None
 
-_LOGGER = logging.getLogger('blog_add_video_consumer')
+_LOGGER = logging.getLogger('video_add_video_consumer')
 
 
 def _init_mysql_pool() -> None:
@@ -109,15 +109,16 @@ def _m3url_juji(website, message):
                 'url_type': url_type
             })
             mq_res1 = _MINGMQ_POOL.opera('send_data_to_queue', *(MINGMQ_CONFIG['download']['queue_name'], task))
-            if mq_res1 and mq_res1['status'] != FAIL:
+            if mq_res1 and mq_res1['status'] == FAIL:
                 raise Exception('下载任务未推送到队列: %s', title)
 
 
 def _task(mq_res, queue_name, lock, sig):
     global _VIDEO_MYSQL_POOL
 
-    with lock:
-        sig -= 1
+    with lock: sig -= 1
+
+    _LOGGER.debug('当前线程: %s，总线程数: %d, sig: %d', get_ident(), active_count(), sig)
 
     if mq_res and mq_res['status'] != FAIL:
         b = False
@@ -147,15 +148,16 @@ def _task(mq_res, queue_name, lock, sig):
 
 def _get_data_from_queue(queue_name):
     global _MINGMQ_POOL, _LOGGER
-    _MINGMQ_POOL.opera('declare_queue', *(MINGMQ_CONFIG['add_video']['queue_name'],))
 
-    sig = MINGMQ_CONFIG['add_article']['pool_size']
+    sig = MINGMQ_CONFIG['add_video']['pool_size']
     lock = Lock()
 
     while True:
-        if sig != 0:
+        if sig > 0:
             try:
                 mq_res: dict = _MINGMQ_POOL.opera('get_data_from_queue', *(queue_name, ))
+                if mq_res is None or mq_res['status'] == FAIL:
+                    continue
                 _LOGGER.debug('从消息队列中获取的消息为: %s', mq_res)
             except Exception as e:
                 _LOGGER.debug('XX: 从消息队列中获取任务失败，错误信息: %s', str(e))
@@ -163,8 +165,9 @@ def _get_data_from_queue(queue_name):
                 Thread(target=_task, args=(mq_res, queue_name, lock, sig)).start()
             except Exception as e:
                 _LOGGER.debug("XX: 线程在执行过程中出现异常，错误信息为: %s", str(e))
-        time.sleep(10)
-
+            time.sleep(1)
+        else:
+            time.sleep(10)
 
 def main(debug=logging.DEBUG) -> None:
     logging.basicConfig(level=debug)
@@ -173,6 +176,7 @@ def main(debug=logging.DEBUG) -> None:
         _init_mysql_pool()
         _init_mingmq_pool()
         _MINGMQ_POOL.opera('declare_queue', *(MINGMQ_CONFIG['add_video']['queue_name'],))
+        _MINGMQ_POOL.opera('declare_queue', *(MINGMQ_CONFIG['download']['queue_name'],))
 
         _get_data_from_queue(MINGMQ_CONFIG['add_video']['queue_name'])
     except:
@@ -190,5 +194,5 @@ def main(debug=logging.DEBUG) -> None:
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
     main()

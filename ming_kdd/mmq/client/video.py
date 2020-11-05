@@ -64,8 +64,6 @@ def _release_mingmq_pool() -> None:
 
 
 def _hanju():
-    results = []
-
     # 第一阶段
     hanjus = []
     last_page = 0
@@ -76,7 +74,7 @@ def _hanju():
         except:
             _LOGGER.error('获取韩剧第一页失败')
     if len(hanjus) == 0 or last_page == 0:
-        return results # 团灭
+        raise Exception("获取第一页失败")
 
     # 第二阶段
     for page in range(1, last_page + 1):
@@ -92,7 +90,6 @@ def _hanju():
                 "ju_name": hanju_name,
                 "jujis": []
             }
-            results.append(video_dict)
             try:  # 这个try是为了爬取某个电视剧的剧集urls失败时，继续下一个电视剧
                 for juji in hanjutv.get_hanju_jujis(hanju['url']):
                     try:  # 这个try是为了爬取某一集失败时，继续下一个集数爬取
@@ -107,10 +104,8 @@ def _hanju():
                         _LOGGER.error("获取剧集m3ul失败: %s", str(juji))
             except:
                 _LOGGER.error("爬取剧集时失败: %s", str(hanju))
-
-    # 第三阶段
-    _LOGGER.info('抓取到韩剧的数据为: %s', str(results))
-    return results
+            finally:
+                yield video_dict
 
 
 def _task(mq_res, queue_name, lock, sig):
@@ -123,18 +118,18 @@ def _task(mq_res, queue_name, lock, sig):
             message_data = json.loads(mq_res['json_obj'][0]['message_data'])
             website: str = message_data['website']
             if website == "https://www.hanjutv.com/":  # 韩剧TV
-                results = _hanju()
-                mq_res1 = _MINGMQ_POOL.opera('send_data_to_queue', *(SERV_MC['add_video']['queue_name'], json.dumps({
-                    'website': website,
-                    'message': results
-                })))
-                _LOGGER.info('推送到消息队列的数据为: %s', str({
-                    'website': website,
-                    'message': results
-                }))
+                for video_dict in _hanju():
+                    mq_res1 = _MINGMQ_POOL.opera('send_data_to_queue', *(SERV_MC['add_video']['queue_name'], json.dumps({
+                        'website': website,
+                        'message': [video_dict]
+                    })))
+                    _LOGGER.info('推送到消息队列的数据为: %s', str({
+                        'website': website,
+                        'message': [video_dict]
+                    }))
 
-                if mq_res1 and mq_res1['status'] != FAIL:
-                    b = True
+                    if mq_res1 and mq_res1['status'] == FAIL:
+                        raise Exception('推送失败: %s' % str(mq_res1))
             else:
                 raise Exception('不合法的website')
         except Exception as e:

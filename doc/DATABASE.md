@@ -40,10 +40,19 @@ CREATE TABLE `photo_s` (
   `title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `user_id` int NOT NULL,
   `file_extension` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
+  `data_src_id` int DEFAULT '0',
+  `downloaded` int DEFAULT '0',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE KEY `title_user_id` (`title`,`user_id`) USING BTREE,
-  FULLTEXT KEY `title` (`title`) WITH PARSER `ngram`
+  FULLTEXT KEY `title` (`title`) WITH PARSER `ngram` 
 ) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+
+CREATE TABLE `dat_src_s` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `name` text,
+  `web_site` text,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='数据源'
 ```
 
 video数据库中的相关表
@@ -56,10 +65,19 @@ CREATE TABLE `video_s` (
   `user_id` int NOT NULL,
   `category_id` int NOT NULL,
   `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci,
+  `data_src_id` int DEFAULT '0',
+  `downloaded` int DEFAULT '0' COMMENT '0 未下载，1 已下载',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE KEY `title_user_id` (`title`,`user_id`) USING BTREE,
-  FULLTEXT KEY `title_description` (`title`,`description`) WITH PARSER `ngram`
+  FULLTEXT KEY `title_description` (`title`,`description`) WITH PARSER `ngram` 
 ) ENGINE=InnoDB AUTO_INCREMENT=77 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+
+CREATE TABLE `dat_src_s` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `name` text,
+  `web_site` text,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='数据源'
 ```
 
 ## XX: 数据监控
