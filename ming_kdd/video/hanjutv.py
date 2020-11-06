@@ -16,6 +16,7 @@ import os
 import shutil
 import traceback
 from ming_kdd.utils.m3u8.m3u8 import download_m3u8_video
+import logging
 
 
 ROOT_URL = 'https://www.hanjutv.com'
@@ -68,13 +69,18 @@ def get_m3u8(go_play_url):
     r = requests.get(go_play_url)
     body_dom = etree.HTML(r.text)
     play_url = 'http:' + body_dom.cssselect('.playBox > #playPath')[0].get('src')
+    logging.debug('play_url: %s', play_url)
 
-    r = requests.get(play_url)
-
-    for line in r.text.splitlines():
-        if 'url:' in line:
-            return line.split('url:')[1].replace("'", "").replace(' ', '')
-    raise
+    # r = requests.get(play_url)
+    #
+    # print(r.text)
+    # for line in r.text.splitlines():
+    #     if 'url:' in line:
+    #         result = line.split('url:')[1].replace("'", "").replace(' ', '')
+    #         # result = result.split('?')[0]
+    #         logging.debug('获取的m3url: %s', result)
+    #         return result
+    return play_url.split('?path=')[1]
 
 
 def _task(hanju_path, hanju, juji):

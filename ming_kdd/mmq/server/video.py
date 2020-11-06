@@ -119,7 +119,7 @@ def _task(mq_res, queue_name):
 
     with LOCK: SIG -= 1
 
-    _LOGGER.debug('当前线程: %s，总线程数: %d, sig: %d', get_ident(), active_count(), sig)
+    _LOGGER.debug('当前线程: %s，总线程数: %d, sig: %d', get_ident(), active_count(), SIG)
 
     if mq_res and mq_res['status'] != FAIL:
         b = False
@@ -165,6 +165,7 @@ def _get_data_from_queue(queue_name):
                 _LOGGER.debug('从消息队列中获取的消息为: %s', mq_res)
             except Exception as e:
                 _LOGGER.debug('XX: 从消息队列中获取任务失败，错误信息: %s', str(e))
+                continue
             try:
                 Thread(target=_task, args=(mq_res, queue_name)).start()
             except Exception as e:
@@ -198,5 +199,5 @@ def main(debug=logging.DEBUG) -> None:
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
     main()

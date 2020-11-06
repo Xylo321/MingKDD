@@ -103,8 +103,8 @@ def _hanju():
                         })
                     except:
                         _LOGGER.error("获取剧集m3ul失败: %s", str(juji))
-                    finally:
-                        time.sleep(5)
+                    # finally:
+                        # time.sleep(5)
             except:
                 _LOGGER.error("爬取剧集时失败: %s", str(hanju))
             finally:
@@ -201,4 +201,5 @@ def main(info=logging.INFO) -> None:
 
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG)
     main()
