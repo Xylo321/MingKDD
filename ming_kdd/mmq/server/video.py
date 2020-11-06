@@ -3,6 +3,7 @@ import traceback
 from threading import Thread, Lock, get_ident, active_count
 import time
 import json
+import sys
 
 from ming_kdd.mmq.settings.mq_serv import MINGMQ_CONFIG, DATA_TYPE, URL_TYPE
 from mingmq.client import Pool as MingMQPool
@@ -113,10 +114,10 @@ def _m3url_juji(website, message):
                 raise Exception('下载任务未推送到队列: %s', title)
 
 
-def _task(mq_res, queue_name, lock, sig):
-    global _VIDEO_MYSQL_POOL
+def _task(mq_res, queue_name):
+    global _VIDEO_MYSQL_POOL, SIG, LOCK
 
-    with lock: sig -= 1
+    with LOCK: SIG -= 1
 
     _LOGGER.debug('当前线程: %s，总线程数: %d, sig: %d', get_ident(), active_count(), sig)
 
@@ -142,27 +143,31 @@ def _task(mq_res, queue_name, lock, sig):
                         _LOGGER.error('消息确认失败: queue_name=%s, message_id=%s', queue_name, message_id)
                 except Exception as e:
                     _LOGGER.debug('XX: 失败，消息确认失败: %s，错误信息: %s', str(message), str(e))
-            with lock:
-                sig += 1
+            with LOCK:
+                SIG += 1
+
+SIG = MINGMQ_CONFIG['add_video']['pool_size']
+LOCK = Lock()
 
 
 def _get_data_from_queue(queue_name):
     global _MINGMQ_POOL, _LOGGER
 
-    sig = MINGMQ_CONFIG['add_video']['pool_size']
-    lock = Lock()
 
     while True:
-        if sig > 0:
+        if SIG > 0:
             try:
                 mq_res: dict = _MINGMQ_POOL.opera('get_data_from_queue', *(queue_name, ))
-                if mq_res is None or mq_res['status'] == FAIL:
-                    continue
+                if mq_res and mq_res['status'] == FAIL:
+                    raise Exception("任务队列中没有任务")
+                if mq_res is None:
+                    _LOGGER.error("服务器内部错误")
+                    sys.exit(1)
                 _LOGGER.debug('从消息队列中获取的消息为: %s', mq_res)
             except Exception as e:
                 _LOGGER.debug('XX: 从消息队列中获取任务失败，错误信息: %s', str(e))
             try:
-                Thread(target=_task, args=(mq_res, queue_name, lock, sig)).start()
+                Thread(target=_task, args=(mq_res, queue_name)).start()
             except Exception as e:
                 _LOGGER.debug("XX: 线程在执行过程中出现异常，错误信息为: %s", str(e))
             time.sleep(1)

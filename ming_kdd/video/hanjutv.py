@@ -127,5 +127,5 @@ def download_one(juji_url, hanju_title, root_path='../download/韩剧TV/'):
 
 
 if __name__ == '__main__':
-    download_all()
-    # download_one('https://www.hanjutv.com/hanju/2406.html', '天国的阶梯')
+    # download_all()
+    download_one('https://www.hanjutv.com/hanju/2406.html', '天国的阶梯')

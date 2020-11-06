@@ -47,10 +47,10 @@ def _release_mingmq_pool() -> None:
 
 
 def _task(mq_res, queue_name, lock, sig):
-    global _BLOG_MYSQL_POOL
+    global _BLOG_MYSQL_POOL, SIG, LOCK
 
-    with lock:
-        sig -= 1
+    with LOCK:
+        SIG -= 1
 
     if mq_res and mq_res['status'] != FAIL:
         b = False
@@ -87,29 +87,32 @@ def _task(mq_res, queue_name, lock, sig):
                         _LOGGER.error('消息确认失败: queue_name=%s, message_id=%s', queue_name, message_id)
                 except Exception as e:
                     _LOGGER.debug('XX: 失败，消息确认失败: %s，错误信息: %s', str(message), str(e))
-            with lock:
-                sig += 1
+            with LOCK:
+                SIG += 1
+
+SIG = MINGMQ_CONFIG['add_article']['pool_size']
+LOCK = Lock()
 
 
 def _get_data_from_queue(queue_name):
-    global _MINGMQ_POOL, _LOGGER
+    global _MINGMQ_POOL, _LOGGER, SIG
     _MINGMQ_POOL.opera('declare_queue', *(MINGMQ_CONFIG['add_article']['queue_name'],))
 
-    sig = MINGMQ_CONFIG['add_article']['pool_size']
-    lock = Lock()
 
     while True:
-        if sig > 0:
+        if SIG > 0:
             try:
                 mq_res: dict = _MINGMQ_POOL.opera('get_data_from_queue', *(queue_name, ))
                 if mq_res is None:
                     _LOGGER.debug('服务器意外关闭')
                     sys.exit(1)
+                if mq_res and mq_res['status'] == FAIL:
+                    raise Exception("任务队列中没有任务")
                 _LOGGER.debug('从消息队列中获取的消息为: %s', mq_res)
             except Exception as e:
                 _LOGGER.debug('XX: 从消息队列中获取任务失败，错误信息: %s', str(e))
             try:
-                Thread(target=_task, args=(mq_res, queue_name, lock, sig)).start()
+                Thread(target=_task, args=(mq_res, queue_name)).start()
             except Exception as e:
                 _LOGGER.debug("XX: 线程在执行过程中出现异常，错误信息为: %s", str(e))
         time.sleep(10)

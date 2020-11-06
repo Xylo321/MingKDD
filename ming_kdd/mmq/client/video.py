@@ -36,6 +36,7 @@ import logging
 import traceback
 from threading import Thread, Lock
 import time
+import sys
 
 from ming_kdd.mmq.settings.mq_cli import MINGMQ_CONFIG
 from ming_kdd.mmq.settings.mq_serv import MINGMQ_CONFIG as SERV_MC
@@ -102,15 +103,18 @@ def _hanju():
                         })
                     except:
                         _LOGGER.error("获取剧集m3ul失败: %s", str(juji))
+                    finally:
+                        time.sleep(5)
             except:
                 _LOGGER.error("爬取剧集时失败: %s", str(hanju))
             finally:
                 yield video_dict
 
 
-def _task(mq_res, queue_name, lock, sig):
-    with lock:
-        sig -= 1
+def _task(mq_res, queue_name):
+    global SIG, LOCK
+    with LOCK:
+        SIG -= 1
 
     if mq_res and mq_res['status'] != FAIL:
         b = False
@@ -144,26 +148,31 @@ def _task(mq_res, queue_name, lock, sig):
                     raise Exception()
                 except Exception as e:
                     _LOGGER.info('XX: 失败，消息确认失败: %s，错误信息: %s，队列: %s', str(message_id), str(e), queue_name)
-            with lock:
-                sig += 1
+            with LOCK:
+                SIG += 1
 
+SIG = sig = MINGMQ_CONFIG['get_video_website']['pool_size']
+LOCK = Lock()
 
 def _get_data_from_queue(queue_name):
-    global _MINGMQ_POOL, _LOGGER
-    sig = MINGMQ_CONFIG['get_video_website']['pool_size'] - 1
-    lock = Lock()
+    global _MINGMQ_POOL, _LOGGER, SIG, Lock
 
     while True:
-        if sig != 0:
+        if SIG > 0:
             mq_res = None
             try:
                 mq_res: dict = _MINGMQ_POOL.opera('get_data_from_queue', *(queue_name, ))
+                if mq_res and mq_res['status'] == FAIL:
+                    raise Exception("任务队列中没有任务")
+                if mq_res is None:
+                    _LOGGER.debug('服务器内部错误')
+                    sys.exit(1)
             except Exception as e:
                 _LOGGER.info('XX: 从消息队列中获取任务失败，错误信息: %s', str(e))
             try:
                 if mq_res and mq_res['status'] != FAIL:
                     _LOGGER.info('从消息队列中获取的消息为: %s', mq_res)
-                    Thread(target=_task, args=(mq_res, queue_name, lock, sig)).start()
+                    Thread(target=_task, args=(mq_res, queue_name)).start()
             except Exception as e:
                 _LOGGER.info("XX: 线程在执行过程中出现异常，错误信息为: %s", str(e))
         time.sleep(10)

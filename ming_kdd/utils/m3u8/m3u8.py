@@ -3,6 +3,7 @@ import re
 import queue
 import requests
 import shutil
+import platform
 
 requests.packages.urllib3.disable_warnings()
 from concurrent.futures import ThreadPoolExecutor
@@ -179,6 +180,10 @@ class M3u8Download:
         合并.ts文件，输出mp4格式视频，需要ffmpeg
         """
         cmd_path = os.path.split(os.path.abspath(__file__))[0] + os.path.sep + 'ffmpeg'
+
+        if platform.platform().startswith('macOS') or platform.platform().startswith('Linux'):
+            cmd_path = 'ffmpeg'
+
         cmd = "%s -allowed_extensions ALL -i %s.m3u8 -acodec copy -vcodec copy -f mp4 %s.mp4" % (
             cmd_path, self.name, self.name
         )

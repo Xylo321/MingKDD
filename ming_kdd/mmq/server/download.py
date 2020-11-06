@@ -1,9 +1,10 @@
 import logging
 import traceback
-from threading import Thread, Lock
+from threading import Thread, Lock, active_count, get_ident
 import time
 import json
 import os
+import sys
 
 from ming_kdd.mmq.settings.mq_serv import MINGMQ_CONFIG, DATA_TYPE, URL_TYPE
 from mingmq.client import Pool as MingMQPool
@@ -58,11 +59,12 @@ def _download_m3u8(data_id, category_id, url, title, data_type):
             if data_type == DATA_TYPE['video']:
                 video.change_video_download_status(data_id)
 
-def _task(mq_res, queue_name, lock, sig):
-    global _VIDEO_MYSQL_POOL
+def _task(mq_res, queue_name):
+    global _VIDEO_MYSQL_POOL, SIG, LOCK
+    _LOGGER.debug('当前线程的id为:%d，总线程数:%d', get_ident(), active_count())
 
-    with lock:
-        sig -= 1
+    with LOCK:
+        SIG -= 1
 
     if mq_res and mq_res['status'] != FAIL:
         b = False
@@ -78,13 +80,14 @@ def _task(mq_res, queue_name, lock, sig):
             data_id = message_data['id']
             category_id = message_data['category_id']
             url = message_data['url']
+            title = message_data['title']
             data_type: list = message_data['data_type']
             url_type: list = message_data['url_type']
 
             if url_type == URL_TYPE['直接下载']:
                 pass
             elif url_type == URL_TYPE['m3url']:
-                _download_m3u8(data_id, category_id, url, data_type)
+                _download_m3u8(data_id, category_id, url, title, data_type)
             b = True
         except Exception as e:
             _LOGGER.debug('XX: 失败，数据存储到mysql: %s，错误信息: %s', str(mq_res), str(e))
@@ -99,25 +102,30 @@ def _task(mq_res, queue_name, lock, sig):
                         _LOGGER.error('消息确认失败: queue_name=%s, message_id=%s', queue_name, message_id)
                 except Exception as e:
                     _LOGGER.debug('XX: 失败，消息确认失败: %s，错误信息: %s', str(message_data), str(e))
-            with lock:
-                sig += 1
+            with LOCK:
+                SIG += 1
+
+SIG = MINGMQ_CONFIG['download']['pool_size']
+LOCK = Lock()
 
 
 def _get_data_from_queue(queue_name):
-    global _MINGMQ_POOL, _LOGGER
-
-    sig = MINGMQ_CONFIG['download']['pool_size']
-    lock = Lock()
+    global _MINGMQ_POOL, _LOGGER, SIG, LOCK
 
     while True:
-        if sig != 0:
+        if SIG > 0:
             try:
                 mq_res: dict = _MINGMQ_POOL.opera('get_data_from_queue', *(queue_name, ))
+                if mq_res and mq_res['status'] == FAIL:
+                    raise Exception("任务队列中没有任务")
+                if mq_res is None:
+                    _LOGGER.debug('服务器内部错误')
+                    sys.exit(1)
                 _LOGGER.debug('从消息队列中获取的消息为: %s', mq_res)
             except Exception as e:
                 _LOGGER.debug('XX: 从消息队列中获取任务失败，错误信息: %s', str(e))
             try:
-                Thread(target=_task, args=(mq_res, queue_name, lock, sig)).start()
+                Thread(target=_task, args=(mq_res, queue_name)).start()
             except Exception as e:
                 _LOGGER.debug("XX: 线程在执行过程中出现异常，错误信息为: %s", str(e))
         time.sleep(10)
