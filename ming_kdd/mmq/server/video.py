@@ -153,7 +153,6 @@ LOCK = Lock()
 def _get_data_from_queue(queue_name):
     global _MINGMQ_POOL, _LOGGER
 
-
     while True:
         if SIG > 0:
             try:
