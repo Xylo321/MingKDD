@@ -83,7 +83,8 @@ def _task(mq_res, queue_name):
                     mq_res = _MINGMQ_POOL.opera('ack_message', *(queue_name, message_id))
                     if mq_res and mq_res['status'] != FAIL:
                         _LOGGER.debug('消息确认成功')
-                    raise Exception()
+                    else:
+                        raise Exception()
                 except Exception as e:
                     _LOGGER.debug('XX: 失败，消息确认失败: %s，错误信息: %s，队列: %s', str(message_id), str(e), queue_name)
             with LOCK:

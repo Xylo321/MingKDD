@@ -46,7 +46,7 @@ def _release_mingmq_pool() -> None:
     _MINGMQ_POOL.release()
 
 
-def _task(mq_res, queue_name, lock, sig):
+def _task(mq_res, queue_name):
     global _BLOG_MYSQL_POOL, SIG, LOCK
 
     with LOCK:
@@ -84,7 +84,7 @@ def _task(mq_res, queue_name, lock, sig):
                     if mq_res and mq_res['status'] != FAIL:
                         _LOGGER.debug('消息确认成功')
                     else:
-                        _LOGGER.error('消息确认失败: queue_name=%s, message_id=%s', queue_name, message_id)
+                        raise
                 except Exception as e:
                     _LOGGER.debug('XX: 失败，消息确认失败: %s，错误信息: %s', str(message), str(e))
             with LOCK:
