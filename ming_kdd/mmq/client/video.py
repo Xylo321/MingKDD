@@ -77,13 +77,16 @@ def _hanju():
     if len(hanjus) == 0 or last_page == 0:
         raise Exception("获取第一页失败")
 
+    _LOGGER.info("总页数: %d", last_page)
+
     # 第二阶段
     for page in range(1, last_page + 1):
+        _LOGGER.info("当前页数: %d", page)
         if page != 1:
             try:
                 hanjus, last_page = hanjutv.get_hanjus(page)
             except Exception as e:
-                _LOGGER.error('分页面时失败，进入下一页: %s', str(e))
+                _LOGGER.error('分页时失败，进入下一页: %s', str(e))
                 continue
         for hanju in hanjus:
             hanju_name = hanju['title']
@@ -108,6 +111,9 @@ def _hanju():
             except:
                 _LOGGER.error("爬取剧集时失败: %s", str(hanju))
             finally:
+                if len(video_dict['jujis']) == 0:
+                    _LOGGER.info("剧集为空: %s", hanju_name)
+                    continue
                 yield video_dict
 
 
@@ -116,7 +122,7 @@ def _task(mq_res, queue_name):
     with LOCK:
         SIG -= 1
 
-    if mq_res and mq_res['status'] != FAIL:
+    if mq_res and mq_res['status'] != FAIL and len(mq_res['json_obj']) != 0:
         b = False
         try:
             message_data = json.loads(mq_res['json_obj'][0]['message_data'])
@@ -137,7 +143,7 @@ def _task(mq_res, queue_name):
             else:
                 raise Exception('不合法的website')
         except Exception as e:
-            _LOGGER.info('XX: 失败，推送到消息队列的数据为: %s，错误信息: %s', str(mq_res), str(e))
+            _LOGGER.info('XX: 失败，推送到消息队列的数据为: %s，错误信息: %s', str(e), traceback.format_exc())
         finally:
             if b == True:
                 message_id = mq_res['json_obj'][0]['message_id']
@@ -145,7 +151,8 @@ def _task(mq_res, queue_name):
                     mq_res = _MINGMQ_POOL.opera('ack_message', *(queue_name, message_id))
                     if mq_res and mq_res['status'] != FAIL:
                         _LOGGER.info('消息确认成功')
-                    raise Exception()
+                    else:
+                        raise Exception()
                 except Exception as e:
                     _LOGGER.info('XX: 失败，消息确认失败: %s，错误信息: %s，队列: %s', str(message_id), str(e), queue_name)
             with LOCK:

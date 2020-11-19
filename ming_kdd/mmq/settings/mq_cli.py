@@ -20,7 +20,7 @@ MINGMQ_CONFIG = {
         'port': 15673,
         'user_name': 'mingmq',
         'passwd': 'mm5201314',
-        'pool_size': 10,
+        'pool_size': 2,
         'queue_name': 'ming_kdd_get_video_website'
     }
 }
