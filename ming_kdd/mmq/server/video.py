@@ -165,6 +165,8 @@ def _get_data_from_queue(queue_name):
                 _LOGGER.debug('从消息队列中获取的消息为: %s', mq_res)
             except Exception as e:
                 _LOGGER.debug('XX: 从消息队列中获取任务失败，错误信息: %s', str(e))
+                time.sleep(10)
+
                 continue
             try:
                 Thread(target=_task, args=(mq_res, queue_name)).start()
