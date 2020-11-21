@@ -21,7 +21,7 @@ from ming_kdd.mmq.settings.db import ROBOT
 _VIDEO_MYSQL_POOL = None
 _MINGMQ_POOL = None
 
-_LOGGER = logging.getLogger('blog_download_consumer')
+_LOGGER = logging.getLogger('download_consumer')
 
 
 def _init_mysql_pool() -> None:
@@ -52,8 +52,12 @@ def _release_mingmq_pool() -> None:
 
 def _download_m3u8(data_id, category_id, url, title, data_type):
     if download_m3u8_video([url], [title]):
-        if upload(MDFS_UPLOAD_URL, MDFS_API_KEY, ROBOT, category_id, title, title, 'mp4') == 1:
-            os.remove(title)
+        file_name = file_path = '%s.mp4' % title
+        if upload(MDFS_UPLOAD_URL, MDFS_API_KEY, ROBOT, category_id, title, file_name, file_path) == 1:
+            try:
+                os.remove(file_path)
+            except:
+                _LOGGER.error(traceback.format_exc())
 
             video = Video(_VIDEO_MYSQL_POOL)
             if data_type == DATA_TYPE['video']:
@@ -62,9 +66,6 @@ def _download_m3u8(data_id, category_id, url, title, data_type):
 def _task(mq_res, queue_name):
     global _VIDEO_MYSQL_POOL, SIG, LOCK
     _LOGGER.debug('当前线程的id为:%d，总线程数:%d', get_ident(), active_count())
-
-    with LOCK:
-        SIG -= 1
 
     if mq_res and mq_res['status'] != FAIL:
         b = False
@@ -81,8 +82,8 @@ def _task(mq_res, queue_name):
             category_id = message_data['category_id']
             url = message_data['url']
             title = message_data['title']
-            data_type: list = message_data['data_type']
-            url_type: list = message_data['url_type']
+            data_type = message_data['data_type']
+            url_type = message_data['url_type']
 
             if url_type == URL_TYPE['直接下载']:
                 pass
@@ -90,7 +91,7 @@ def _task(mq_res, queue_name):
                 _download_m3u8(data_id, category_id, url, title, data_type)
             b = True
         except Exception as e:
-            _LOGGER.debug('XX: 失败，数据存储到mysql: %s，错误信息: %s', str(mq_res), str(e))
+            _LOGGER.debug('XX: 失败，数据存储到mysql: %s，错误信息: %s，堆栈报错: %s', str(mq_res), str(e), traceback.format_exc())
         finally:
             if b == True:
                 message_id = mq_res['json_obj'][0]['message_id']
@@ -124,11 +125,15 @@ def _get_data_from_queue(queue_name):
                 _LOGGER.debug('从消息队列中获取的消息为: %s', mq_res)
             except Exception as e:
                 _LOGGER.debug('XX: 从消息队列中获取任务失败，错误信息: %s', str(e))
+                time.sleep(10)
+                continue
             try:
+                with LOCK: SIG -= 1
                 Thread(target=_task, args=(mq_res, queue_name)).start()
             except Exception as e:
                 _LOGGER.debug("XX: 线程在执行过程中出现异常，错误信息为: %s", str(e))
-        time.sleep(10)
+        else:
+            time.sleep(10)
 
 
 def main(debug=logging.DEBUG) -> None:

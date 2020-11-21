@@ -15,6 +15,14 @@ class Video(MySQLBase):
         else:
             return None
 
+    def get_video_download_status(self, video_id):
+        sql = 'select downloaded from video_s where id = %s'
+        result = self.rdbms_pool.query(sql, args=(video_id, ))
+        if result != None and len(result) != 0:
+            return result[0]['downloaded']
+        else:
+            return None
+
     def change_video_download_status(self, video_id):
         sql = 'update video_s set downloaded = 1 where id = %s'
         return self.rdbms_pool.edit(sql, args=(video_id, ))

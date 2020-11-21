@@ -97,6 +97,11 @@ def _m3url_juji(website, message):
                 video.add_video(title, category_id, file_extension, date, description, data_src_id)
                 video_id = video.get_video_id(title)
 
+            downloaded = video.get_video_download_status(video_id)
+            if downloaded != None and downloaded == 1:
+                # 视频已经下载
+                return
+
             m3url = juji['m3url']
             # 建议这里最好分发下载，不然，太多文件要下载，这个任务要猴年马月才能完成
             data_type = DATA_TYPE['video']

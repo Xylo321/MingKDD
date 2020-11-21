@@ -184,9 +184,15 @@ class M3u8Download:
         if platform.platform().startswith('macOS') or platform.platform().startswith('Linux'):
             cmd_path = 'ffmpeg'
 
-        cmd = "%s -allowed_extensions ALL -i %s.m3u8 -acodec copy -vcodec copy -f mp4 %s.mp4" % (
+        cmd_tpl = "%s -allowed_extensions ALL -i %s.m3u8 -acodec copy -vcodec copy -f mp4 %s.mp4"
+        # if platform.platform().startswith('macOS') or platform.platform().startswith('Linux'):
+        #     cmd_tpl = '%s -allowed_extensions ALL -i %s.m3u8 -acodec copy -vcodec copy -f mp4 "%s.mp4"'
+
+        cmd = cmd_tpl % (
             cmd_path, self.name, self.name
         )
+        if platform.platform().startswith('macOS') or platform.platform().startswith('Linux'):
+            cmd = cmd.replace('(', '\(').replace(')', '\)')
         os.system(cmd)
         print(f"Download successfully --> {self.name}")
         self.download_success = True
