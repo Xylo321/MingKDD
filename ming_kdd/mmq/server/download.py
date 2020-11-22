@@ -62,6 +62,7 @@ def _download_m3u8(data_id, category_id, url, title, data_type):
             video = Video(_VIDEO_MYSQL_POOL)
             if data_type == DATA_TYPE['video']:
                 video.change_video_download_status(data_id)
+    raise Exception('下载失败: %s' % title)
 
 def _task(mq_res, queue_name):
     global _VIDEO_MYSQL_POOL, SIG, LOCK

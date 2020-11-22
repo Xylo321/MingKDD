@@ -4,6 +4,9 @@ import queue
 import requests
 import shutil
 import platform
+import shlex
+import subprocess
+import logging
 
 requests.packages.urllib3.disable_warnings()
 from concurrent.futures import ThreadPoolExecutor
@@ -44,6 +47,7 @@ class M3u8Download:
         self.ts_url_list = []
         self.success_sum = 0
         self.ts_sum = 0
+        self.log = logging.getLogger('M3u8Download')
 
         self.download_success = False
         self.headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) \
@@ -56,7 +60,13 @@ class M3u8Download:
                     pool.submit(self.download_ts, ts_url, auto_id, self.num_retries)
 
             if self.success_sum == self.ts_sum:
+                self.log.info('下载成功: %s', self.name)
                 self.output_mp4()
+                self.download_success = True
+            else:
+                raise Exception('下载失败: %s' % self.name)
+        except Exception as e:
+            self.log.error(str(e))
         finally:
             # os.system(f'rm -rf ./{self.name} ./{self.name}.m3u8')
             cwp = os.getcwd() + os.path.sep
@@ -138,7 +148,7 @@ class M3u8Download:
                             if chunk:
                                 ts.write(chunk)
                     self.success_sum += 1
-                    print(f"Downloading {self.name}：{self.success_sum}/{self.ts_sum}")
+                    self.log.info(f"Downloading {self.name}：{self.success_sum}/{self.ts_sum}")
                 else:
                     self.download_ts(ts_url, save_ts_name, num_retries - 1)
                 res.close()
@@ -171,7 +181,7 @@ class M3u8Download:
         except Exception as e:
             if os.path.exists(f"./{self.name}/key"):
                 os.remove(f"./{self.name}/key")
-            print("加密视频,无法加载key,揭秘失败")
+            self.log.info("加密视频,无法加载key,揭秘失败")
             if num_retries > 0:
                 self.download_key(key_line, num_retries - 1)
 
@@ -193,10 +203,11 @@ class M3u8Download:
         )
         if platform.platform().startswith('macOS') or platform.platform().startswith('Linux'):
             cmd = cmd.replace('(', '\(').replace(')', '\)')
-        os.system(cmd)
-        print(f"Download successfully --> {self.name}")
-        self.download_success = True
-
+        # os.system(cmd)
+        args = shlex.split(cmd)
+        p = subprocess.Popen(args)
+        if p.wait() != 0:
+            raise Exception('合并ts文件，输出mp4视频失败: %s' % self.name)
 
 def download_m3u8_video(url_list, name_list, mw=30, nr=5):
     # 如果M3U8_URL的数量 ≠ SAVE_NAME的数量
