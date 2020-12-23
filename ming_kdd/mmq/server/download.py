@@ -5,12 +5,14 @@ import time
 import json
 import os
 import sys
+import requests
 
 from ming_kdd.mmq.settings.mq_serv import MINGMQ_CONFIG, DATA_TYPE, URL_TYPE
 from mingmq.client import Pool as MingMQPool
 from mingmq.message import FAIL
-from ming_kdd.mmq.settings.db import VIDEO_MYSQL_CONFIG
-from ming_kdd.mmq.db.video import Video, DataSrc, Category
+from ming_kdd.mmq.settings.db import VIDEO_MYSQL_CONFIG, IMAGE_MYSQL_CONFIG
+from ming_kdd.mmq.db.video import Video
+from ming_kdd.mmq.db.image import Image
 from ming_kdd.mmq.db.rdbms import MySQLPool
 from ming_kdd.utils.m3u8.m3u8 import download_m3u8_video
 from ming_kdd.utils.mdfs import upload
@@ -18,6 +20,7 @@ from ming_kdd.mmq.settings.dfs import MDFS_API_KEY, MDFS_UPLOAD_URL
 from ming_kdd.mmq.settings.db import ROBOT
 
 
+_IMAGE_MYSQL_POOL = None
 _VIDEO_MYSQL_POOL = None
 _MINGMQ_POOL = None
 
@@ -25,16 +28,23 @@ _LOGGER = logging.getLogger('download_consumer')
 
 
 def _init_mysql_pool() -> None:
-    global _VIDEO_MYSQL_POOL
+    global _VIDEO_MYSQL_POOL, _IMAGE_MYSQL_POOL
     _VIDEO_MYSQL_POOL = MySQLPool(host=VIDEO_MYSQL_CONFIG['host'],
                                   user=VIDEO_MYSQL_CONFIG['user'],
                                   passwd=VIDEO_MYSQL_CONFIG['passwd'],
                                   db=VIDEO_MYSQL_CONFIG['db'],
                                   size=VIDEO_MYSQL_CONFIG['size'])
+    _IMAGE_MYSQL_POOL = MySQLPool(host=IMAGE_MYSQL_CONFIG['host'],
+                                  user=IMAGE_MYSQL_CONFIG['user'],
+                                  passwd=IMAGE_MYSQL_CONFIG['passwd'],
+                                  db=IMAGE_MYSQL_CONFIG['db'],
+                                  size=IMAGE_MYSQL_CONFIG['size'])
 
 def _release_mysql_pool():
-    global _VIDEO_MYSQL_POOL
+    global _VIDEO_MYSQL_POOL, _IMAGE_MYSQL_POOL
     _VIDEO_MYSQL_POOL.release()
+    _IMAGE_MYSQL_POOL.release()
+
 
 def _init_mingmq_pool() -> None:
     global _MINGMQ_POOL
@@ -50,19 +60,53 @@ def _release_mingmq_pool() -> None:
     _MINGMQ_POOL.release()
 
 
-def _download_m3u8(data_id, category_id, url, title, data_type):
+def _download_m3u8(data_id, category_id, url, title, data_type, file_extension):
     if download_m3u8_video([url], [title]):
-        file_name = file_path = '%s.mp4' % title
+        file_name = file_path = '%s.%s' % (title, file_extension)
         if upload(MDFS_UPLOAD_URL, MDFS_API_KEY, ROBOT, category_id, title, file_name, file_path) == 1:
             try:
                 os.remove(file_path)
             except:
                 _LOGGER.error(traceback.format_exc())
 
-            video = Video(_VIDEO_MYSQL_POOL)
-            if data_type == DATA_TYPE['video']:
-                video.change_video_download_status(data_id)
+            _change_download_status(data_type, data_id)
+
     raise Exception('下载失败: %s' % title)
+
+
+def _change_download_status(data_type, data_id):
+    video = Video(_VIDEO_MYSQL_POOL)
+    image = Image(_IMAGE_MYSQL_POOL)
+    if data_type == DATA_TYPE['video']:
+        video.change_video_download_status(data_id)
+    elif data_type == DATA_TYPE['photo']:
+        image.change_photo_download_status(data_id)
+    else:
+        raise Exception('XX: 不合法的数据类型: %s', data_type)
+
+def _download_photo(data_id, category_id, url, title, data_type, file_extension):
+    file_path = filename = '%s.%s' % (str(time.time()), file_extension)
+
+    try:
+        r = requests.get(url, stream=True)
+        chunk_size = 4096
+        with open(filename, 'wb') as fd:
+            for chunk in r.iter_content(chunk_size):
+                fd.write(chunk)
+    except:
+        # 下载失败
+        _LOGGER.error(traceback.format_exc())
+        raise Exception('下载失败: %s', title)
+
+    if upload(MDFS_UPLOAD_URL, MDFS_API_KEY, ROBOT, category_id, title, filename, file_path) == 1:
+        try:
+            os.remove(file_path)
+        except:
+            _LOGGER.error(traceback.format_exc())
+        _change_download_status(data_type, data_id)
+    else:
+        raise Exception('上传失败: %s', title)
+
 
 def _task(mq_res, queue_name):
     global _VIDEO_MYSQL_POOL, SIG, LOCK
@@ -77,7 +121,8 @@ def _task(mq_res, queue_name):
             'category_id': category_id
             'url': m3url,
             'data_type': data_type,
-            'url_type': url_type
+            'url_type': url_type,
+            'file_extension': file_extension
             """
             data_id = message_data['id']
             category_id = message_data['category_id']
@@ -85,11 +130,24 @@ def _task(mq_res, queue_name):
             title = message_data['title']
             data_type = message_data['data_type']
             url_type = message_data['url_type']
+            file_extension = message_data['file_extension']
 
-            if url_type == URL_TYPE['直接下载']:
-                pass
-            elif url_type == URL_TYPE['m3url']:
-                _download_m3u8(data_id, category_id, url, title, data_type)
+            if data_type == DATA_TYPE['photo']:
+                if url_type == URL_TYPE['直接下载']:
+                    _download_photo(data_id, category_id, url, title, data_type, file_extension)
+                elif url_type == URL_TYPE['m3url']:
+                    pass
+                else:
+                    _LOGGER.error('XX: 不是合法的url类型: %s', str(message_data))
+            elif data_type == DATA_TYPE['video']:
+                if url_type == URL_TYPE['直接下载']:
+                    pass
+                elif url_type == URL_TYPE['m3url']:
+                    _download_m3u8(data_id, category_id, url, title, data_type, file_extension)
+                else:
+                    _LOGGER.error('XX: 不是合法的url类型: %s', str(message_data))
+            else:
+                _LOGGER.error('XX: 不是合法的数据类型: %s', str(message_data))
             b = True
         except Exception as e:
             _LOGGER.debug('XX: 失败，数据存储到mysql: %s，错误信息: %s，堆栈报错: %s', str(mq_res), str(e), traceback.format_exc())

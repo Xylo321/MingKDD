@@ -11,23 +11,22 @@
 如:
 {
     "website": "https://www.hanjutv.com/",
-    "message": json.dumps(
-        [
-            {
-                "ju_name": "九尾狐传",
-                "jujis": [
-                    {
-                        "m3url": xxx,
-                        "file_name": xxx
-                    },
-                    {
-                        "m3url": xxx,
-                        "file_name": xxx
-                    }
-                ]
-            },
-        ]
-    )
+    "message":
+    [
+        {
+            "ju_name": "九尾狐传",
+            "jujis": [
+                {
+                    "m3url": xxx,
+                    "file_name": xxx
+                },
+                {
+                    "m3url": xxx,
+                    "file_name": xxx
+                }
+            ]
+        },
+    ]
 }
 """
 

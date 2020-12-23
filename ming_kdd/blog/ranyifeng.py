@@ -36,6 +36,7 @@ def pag_article_list(url):
             'url': al.get("href")
         })
 
+    title_urls.reverse()
     return title_urls
 
 

@@ -51,23 +51,22 @@ def _m3url_juji(website, message):
     message例:
     {
         "website": "https://www.hanjutv.com/",
-        "message": json.dumps(
-            [
-                {
-                    "ju_name": "九尾狐传",
-                    "jujis": [
-                        {
-                            "m3url": xxx,
-                            "file_name": xxx
-                        },
-                        {
-                            "m3url": xxx,
-                            "file_name": xxx
-                        }
-                    ]
-                },
-            ]
-        )
+        "message":
+        [
+            {
+                "ju_name": "九尾狐传",
+                "jujis": [
+                    {
+                        "m3url": xxx,
+                        "file_name": xxx
+                    },
+                    {
+                        "m3url": xxx,
+                        "file_name": xxx
+                    }
+                ]
+            },
+        ]
     }
     """
     data_src = DataSrc(_VIDEO_MYSQL_POOL)
@@ -112,7 +111,8 @@ def _m3url_juji(website, message):
                 'title': title,
                 'url': m3url,
                 'data_type': data_type,
-                'url_type': url_type
+                'url_type': url_type,
+                'file_extension': file_extension
             })
             mq_res1 = _MINGMQ_POOL.opera('send_data_to_queue', *(MINGMQ_CONFIG['download']['queue_name'], task))
             if mq_res1 and mq_res1['status'] == FAIL:
