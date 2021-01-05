@@ -74,6 +74,23 @@ def _download_m3u8(data_id, category_id, url, title, data_type, file_extension):
     raise Exception('下载失败: %s' % title)
 
 
+def _data_downloaded(data_type, data_id):
+    video = Video(_VIDEO_MYSQL_POOL)
+    image = Image(_IMAGE_MYSQL_POOL)
+    downloaded = None
+    if data_type == DATA_TYPE['video']:
+        downloaded = video.get_video_download_status(data_id)
+    elif data_type == DATA_TYPE['photo']:
+        downloaded = image.get_photo_download_status(data_id)
+    else:
+        raise Exception('XX: 不合法的数据类型: %s', data_type)
+    if downloaded == 1:
+        return True
+    elif downloaded is None:
+        raise Exception('XX: downloaded is None: %s', str(data_id))
+    else:
+        return False
+
 def _change_download_status(data_type, data_id):
     video = Video(_VIDEO_MYSQL_POOL)
     image = Image(_IMAGE_MYSQL_POOL)
@@ -85,6 +102,10 @@ def _change_download_status(data_type, data_id):
         raise Exception('XX: 不合法的数据类型: %s', data_type)
 
 def _download_photo(data_id, category_id, url, title, data_type, file_extension):
+    downloaded_status = _data_downloaded(data_type, data_id)
+    if downloaded_status:
+        raise Exception('XX: 数据已下载: %s', str(data_id))
+
     file_path = filename = '%s.%s' % (str(time.time()), file_extension)
 
     try:
@@ -97,16 +118,22 @@ def _download_photo(data_id, category_id, url, title, data_type, file_extension)
         # 下载失败
         _LOGGER.error(traceback.format_exc())
         raise Exception('下载失败: %s', title)
-
-    if upload(MDFS_UPLOAD_URL, MDFS_API_KEY, ROBOT, category_id, title, filename, file_path) == 1:
+    err = 0
+    try:
+        if upload(MDFS_UPLOAD_URL, MDFS_API_KEY, ROBOT, category_id, title, filename, file_path) == 1:
+            _change_download_status(data_type, data_id)
+        else:
+            err = 1
+    except:
+        _LOGGER.error(traceback.format_exc())
+    finally:
         try:
             os.remove(file_path)
         except:
             _LOGGER.error(traceback.format_exc())
-        _change_download_status(data_type, data_id)
-    else:
-        raise Exception('上传失败: %s', title)
 
+    if err != 0:
+        raise Exception('上传失败: %s', title)
 
 def _task(mq_res, queue_name):
     global _VIDEO_MYSQL_POOL, SIG, LOCK

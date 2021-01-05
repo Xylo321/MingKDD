@@ -96,8 +96,6 @@ LOCK = Lock()
 
 def _get_data_from_queue(queue_name):
     global _MINGMQ_POOL, _LOGGER, SIG
-    _MINGMQ_POOL.opera('declare_queue', *(queue_name,))
-    _MINGMQ_POOL.opera('declare_queue', *(SERV_MC['add_article']['queue_name'],))
 
     while True:
         if SIG != 0:
@@ -123,6 +121,10 @@ def main(debug=logging.DEBUG) -> None:
     global _LOGGER
     try:
         _init_mingmq_pool()
+
+        _MINGMQ_POOL.opera('declare_queue', *(MINGMQ_CONFIG['get_article_category']['queue_name'],))
+        _MINGMQ_POOL.opera('declare_queue', *(SERV_MC['add_article']['queue_name'],))
+
         # 测试
         _MINGMQ_POOL.opera('send_data_to_queue', *(MINGMQ_CONFIG['get_article_category']['queue_name'], json.dumps({
             "category_id": 40
