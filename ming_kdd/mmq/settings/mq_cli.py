@@ -1,6 +1,6 @@
 MINGMQ_CONFIG = {
     'get_article_category': {
-        'host': 'serv_pro',
+        'host': 'mingmq',
         'port': 15673,
         'user_name': 'mingmq',
         'passwd': 'mm5201314',
@@ -8,7 +8,7 @@ MINGMQ_CONFIG = {
         'queue_name': 'ming_kdd_get_article_category'
     },
     'get_photo_website': {
-        'host': 'serv_pro',
+        'host': 'mingmq',
         'port': 15673,
         'user_name': 'mingmq',
         'passwd': 'mm5201314',
@@ -16,7 +16,7 @@ MINGMQ_CONFIG = {
         'queue_name': 'ming_kdd_get_photo_website'
     },
     'get_video_website': {
-        'host': 'serv_pro',
+        'host': 'mingmq',
         'port': 15673,
         'user_name': 'mingmq',
         'passwd': 'mm5201314',

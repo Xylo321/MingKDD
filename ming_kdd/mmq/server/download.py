@@ -70,8 +70,10 @@ def _download_m3u8(data_id, category_id, url, title, data_type, file_extension):
                 _LOGGER.error(traceback.format_exc())
 
             _change_download_status(data_type, data_id)
-
-    raise Exception('下载失败: %s' % title)
+        else:
+            raise Exception('下载失败: %s' % title)
+    else:
+        raise Exception('下载失败: %s' % title)
 
 
 def _data_downloaded(data_type, data_id):
@@ -102,10 +104,6 @@ def _change_download_status(data_type, data_id):
         raise Exception('XX: 不合法的数据类型: %s', data_type)
 
 def _download_photo(data_id, category_id, url, title, data_type, file_extension):
-    downloaded_status = _data_downloaded(data_type, data_id)
-    if downloaded_status:
-        raise Exception('XX: 数据已下载: %s', str(data_id))
-
     file_path = filename = '%s.%s' % (str(time.time()), file_extension)
 
     try:
@@ -159,22 +157,26 @@ def _task(mq_res, queue_name):
             url_type = message_data['url_type']
             file_extension = message_data['file_extension']
 
-            if data_type == DATA_TYPE['photo']:
-                if url_type == URL_TYPE['直接下载']:
-                    _download_photo(data_id, category_id, url, title, data_type, file_extension)
-                elif url_type == URL_TYPE['m3url']:
-                    pass
+            downloaded_status = _data_downloaded(data_type, data_id)
+            if downloaded_status == False:
+                if data_type == DATA_TYPE['photo']:
+                    if url_type == URL_TYPE['直接下载']:
+                        _download_photo(data_id, category_id, url, title, data_type, file_extension)
+                    elif url_type == URL_TYPE['m3url']:
+                        pass
+                    else:
+                        _LOGGER.error('XX: 不是合法的url类型: %s', str(message_data))
+                elif data_type == DATA_TYPE['video']:
+                    if url_type == URL_TYPE['直接下载']:
+                        pass
+                    elif url_type == URL_TYPE['m3url']:
+                        _download_m3u8(data_id, category_id, url, title, data_type, file_extension)
+                    else:
+                        _LOGGER.error('XX: 不是合法的url类型: %s', str(message_data))
                 else:
-                    _LOGGER.error('XX: 不是合法的url类型: %s', str(message_data))
-            elif data_type == DATA_TYPE['video']:
-                if url_type == URL_TYPE['直接下载']:
-                    pass
-                elif url_type == URL_TYPE['m3url']:
-                    _download_m3u8(data_id, category_id, url, title, data_type, file_extension)
-                else:
-                    _LOGGER.error('XX: 不是合法的url类型: %s', str(message_data))
+                    _LOGGER.error('XX: 不是合法的数据类型: %s', str(message_data))
             else:
-                _LOGGER.error('XX: 不是合法的数据类型: %s', str(message_data))
+                _LOGGER.info('数据已下载')
             b = True
         except Exception as e:
             _LOGGER.debug('XX: 失败，数据存储到mysql: %s，错误信息: %s，堆栈报错: %s', str(mq_res), str(e), traceback.format_exc())

@@ -203,11 +203,13 @@ class M3u8Download:
         )
         if platform.platform().startswith('macOS') or platform.platform().startswith('Linux'):
             cmd = cmd.replace('(', '\(').replace(')', '\)')
-        # os.system(cmd)
-        args = shlex.split(cmd)
-        p = subprocess.Popen(args)
-        if p.wait() != 0:
-            raise Exception('合并ts文件，输出mp4视频失败: %s' % self.name)
+            args = shlex.split(cmd)
+            p = subprocess.Popen(args)
+            if p.wait() != 0:
+                raise Exception('合并ts文件，输出mp4视频失败: %s' % self.name)
+        else:
+            os.system(cmd)
+
 
 def download_m3u8_video(url_list, name_list, mw=30, nr=5):
     # 如果M3U8_URL的数量 ≠ SAVE_NAME的数量
