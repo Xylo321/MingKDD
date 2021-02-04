@@ -213,7 +213,7 @@ def _get_data_from_queue(queue_name):
                 _LOGGER.debug('从消息队列中获取的消息为: %s', mq_res)
             except Exception as e:
                 _LOGGER.debug('XX: 从消息队列中获取任务失败，错误信息: %s', str(e))
-                time.sleep(10)
+                time.sleep(3)
                 continue
             try:
                 with LOCK: SIG -= 1
@@ -221,7 +221,7 @@ def _get_data_from_queue(queue_name):
             except Exception as e:
                 _LOGGER.debug("XX: 线程在执行过程中出现异常，错误信息为: %s", str(e))
         else:
-            time.sleep(10)
+            time.sleep(3)
 
 
 def main(debug=logging.DEBUG) -> None:
