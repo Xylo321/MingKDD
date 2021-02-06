@@ -1,5 +1,5 @@
 IMAGE_MYSQL_CONFIG = {
-    "host": 'kfxce.com',
+    "host": 'master',
     "user": "root",
     "passwd": "mm5201314",
     "db": "image",
@@ -7,7 +7,7 @@ IMAGE_MYSQL_CONFIG = {
 }
 
 VIDEO_MYSQL_CONFIG = {
-    "host": 'kfxce.com',
+    "host": 'master',
     "user": "root",
     "passwd": "mm5201314",
     "db": "video",
@@ -15,7 +15,7 @@ VIDEO_MYSQL_CONFIG = {
 }
 
 BLOG_MYSQL_CONFIG = {
-    "host": 'kfxce.com',
+    "host": 'master',
     "user": "root",
     "passwd": "mm5201314",
     "db": "blog",

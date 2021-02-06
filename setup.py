@@ -19,7 +19,8 @@ setup(
         "cssselect",
         "mingmq",
         "PyMySQL",
-        "mingdfs"
+        "mingdfs",
+        "pysocks"
     ],
     entry_points="""
     [console_scripts]
