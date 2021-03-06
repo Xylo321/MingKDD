@@ -83,6 +83,8 @@ class M3u8Download:
         """
         try:
             res = requests.get(m3u8_url, timeout=(10, 30), verify=False, headers=self.headers)
+            if res.status_code == 404:
+                return
             self.front_url = res.url.split(res.request.path_url)[0]
             if "EXT-X-STREAM-INF" in res.text:  # 判定为顶级M3U8文件
                 for line in res.text.split('\n'):
@@ -141,7 +143,8 @@ class M3u8Download:
         try:
             if not os.path.exists(f"./{self.name}/{save_ts_name}"):
                 res = requests.get(ts_url, stream=True, timeout=(5, 30), verify=False, headers=self.headers)
-
+                if res.status_code == 404:
+                    return
                 if res.status_code == 200:
                     with open(f"./{self.name}/{save_ts_name}", "wb") as ts:
                         for chunk in res.iter_content(chunk_size=1024):
@@ -174,6 +177,8 @@ class M3u8Download:
             true_key_url = self.url.rsplit("/", 1)[0] + '/' + may_key_url
         try:
             res = requests.get(true_key_url, timeout=(10, 30), verify=False, headers=self.headers)
+            if res.status_code == 404:
+                return
             with open(f"./{self.name}/key", 'wb') as f:
                 f.write(res.content)
             res.close()
