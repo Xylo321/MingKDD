@@ -34,6 +34,9 @@ class ChromeDriver(object):
         self.driver.get(url)
         self.driver.set_page_load_timeout(page_load_time_out)
 
+    def current_url(self):
+        return self.driver.current_url
+
     def cssselect(self, css_selector):
         return self.driver.find_elements_by_css_selector(css_selector)
 

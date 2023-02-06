@@ -36,6 +36,7 @@ import traceback
 from threading import Thread, Lock
 import time
 import sys
+import requests
 
 from ming_kdd.mmq.settings.mq_cli import MINGMQ_CONFIG
 from ming_kdd.mmq.settings.mq_serv import MINGMQ_CONFIG as SERV_MC
@@ -64,56 +65,11 @@ def _release_mingmq_pool() -> None:
 
 
 def _hanju():
-    # 第一阶段
-    hanjus = []
-    last_page = 0
-    for i in range(3): # 重试3次，3次失败则退出
-        try:
-            hanjus, last_page = hanjutv.get_hanjus()
-            break
-        except:
-            _LOGGER.error('获取韩剧第一页失败')
-    if len(hanjus) == 0 or last_page == 0:
-        raise Exception("获取第一页失败")
-
-    _LOGGER.info("总页数: %d", last_page)
-
-    # 第二阶段
-    for page in range(1, last_page + 1):
-        _LOGGER.info("当前页数: %d", page)
-        if page != 1:
-            try:
-                hanjus, last_page = hanjutv.get_hanjus(page)
-            except Exception as e:
-                _LOGGER.error('分页时失败，进入下一页: %s', str(e))
-                continue
-        for hanju in hanjus:
-            hanju_name = hanju['title']
-            video_dict = {
-                "ju_name": hanju_name,
-                "jujis": []
-            }
-            try:  # 这个try是为了爬取某个电视剧的剧集urls失败时，继续下一个电视剧
-                for juji in hanjutv.get_hanju_jujis(hanju['url']):
-                    try:  # 这个try是为了爬取某一集失败时，继续下一个集数爬取
-                        m3url = hanjutv.get_m3u8(juji[0])
-                        file_name = hanju['title'] + f'(第{juji[1]}集)'
-                        _LOGGER.info("爬取的剧集信息为: %s，%s", file_name, m3url)
-                        video_dict['jujis'].append({
-                            'file_name': file_name,
-                            'm3url': m3url
-                        })
-                    except:
-                        _LOGGER.error("获取剧集m3ul失败: %s", str(juji))
-                    # finally:
-                        # time.sleep(5)
-            except:
-                _LOGGER.error("爬取剧集时失败: %s", str(hanju))
-            finally:
-                if len(video_dict['jujis']) == 0:
-                    _LOGGER.info("剧集为空: %s", hanju_name)
-                    continue
-                yield video_dict
+    # video_dict = {
+    #     "ju_name": hanju_name,
+    #     "jujis": []
+    # }
+    yield
 
 
 def _task(mq_res, queue_name):

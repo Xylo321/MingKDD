@@ -71,7 +71,7 @@ def _download_m3u8(data_id, category_id, url, title, data_type, file_extension):
 
             _change_download_status(data_type, data_id)
         else:
-            raise Exception('下载失败: %s' % title)
+            raise Exception('上传失败: %s' % title)
     else:
         raise Exception('下载失败: %s' % title)
 
